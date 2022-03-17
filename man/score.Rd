@@ -2,7 +2,7 @@
 % Please edit documentation in R/scoring.R
 \name{score}
 \alias{score}
-\title{Compute the CRPS score of your forecast}
+\title{Compute the CRPS & logs score of your forecast}
 \usage{
 score(
   forecast,
@@ -25,5 +25,5 @@ which is attached as an extra column if not available.  Serves as a forecast ser
 \item{target_vars}{for 'wide' format, character vector of valid variable names}
 }
 \description{
-Compute the CRPS score of your forecast
+Compute the CRPS & logs score of your forecast
 }

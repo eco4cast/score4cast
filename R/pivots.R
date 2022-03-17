@@ -1,0 +1,38 @@
+
+# standardizes format, 
+# pivots to long form
+# deduplicates predictions
+
+#' @param df standardized target data.frame in wide format
+#' @param target_vars a character vector of target variable names
+pivot_target <- function(df, target_vars = ""){
+  
+  df %>% 
+    standardize_format(target_vars = target_vars) %>% 
+    tidyr::pivot_longer(tidyselect::any_of(target_vars), 
+                        names_to = "target", 
+                        values_to = "observed") %>% 
+    filter(!is.na(observed))
+}
+
+#' @param df standardized target data.frame in wide format
+#' @param target_vars a character vector of target variable names
+pivot_forecast <- function(df, target_vars=""){
+  
+  df <- df %>% 
+    split_filename() %>%
+    standardize_format(target_vars = target_vars) %>% 
+    tidyr::pivot_longer(tidyselect::any_of(target_vars), 
+                        names_to = "target", 
+                        values_to = "predicted")
+  
+  df <- deduplicate_predictions(df)
+  
+  if("statistic" %in% colnames(df)){
+    df <- df %>% 
+      tidyr::pivot_wider(names_from = statistic,
+                         values_from = predicted)
+  }
+  
+  df
+}
