@@ -2,6 +2,8 @@
 
 export(crps_logs_score)
 export(include_horizon)
+export(pivot_forecast)
+export(pivot_target)
 export(score)
 importFrom(dplyr,`%>%`)
 importFrom(dplyr,across)

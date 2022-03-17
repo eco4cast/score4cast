@@ -3,8 +3,11 @@
 # pivots to long form
 # deduplicates predictions
 
+#' pivot target
+#' 
 #' @param df standardized target data.frame in wide format
 #' @param target_vars a character vector of target variable names
+#' @export
 pivot_target <- function(df, target_vars = ""){
   
   df %>% 
@@ -15,8 +18,10 @@ pivot_target <- function(df, target_vars = ""){
     filter(!is.na(observed))
 }
 
+#' pivot forecast
 #' @param df standardized target data.frame in wide format
 #' @param target_vars a character vector of target variable names
+#' @export
 pivot_forecast <- function(df, target_vars=""){
   
   df <- df %>% 
