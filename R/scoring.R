@@ -2,13 +2,14 @@
 #' 
 #' @param forecast forecast data frame or file
 #' @param target target path or URL (csv file)
-#' @importFrom dplyr `%>%`
+#' @param theme a theme name, an additional metadata field
+#' which is attached as an extra column if not available.  Serves as a forecast series identifier
+#' @param target_vars for 'wide' format, character vector of valid variable names
+#' @importFrom dplyr `%>%` pull mutate select distinct filter 
+#' @importFrom dplyr `%>%` group_by summarise left_join rename
+#' 
 #' 
 #' @export
-#' @examples 
-#' forecast_file <- system.file("extdata/aquatics-2021-02-01-EFInull.csv.gz", 
-#'                               package = "neon4cast")
-#' score(forecast_file, "aquatics")                          
 score <- function(forecast,
                   target,
                   theme = c("aquatics", "beetles",
@@ -387,65 +388,6 @@ write_scores <- function(scores, dir = "scores"){
 }
 
 
-#' score schema for arrow::open_dataset
-#' 
-#' Open all score.csv files from local or remote disk using arrow by
-#' declaring the appropriate file schema.
-#' @importFrom arrow schema
-#' @export
-score_schema  <- function() {
-  
-  arrow::schema(
-    theme      = arrow::string(),
-    team       = arrow::string(),
-    issue_date = arrow::date32(),
-    site       = arrow::string(),
-    x          = arrow::float64(),
-    y          = arrow::float64(),
-    z          = arrow::float64(),
-    time       = arrow::timestamp("s", timezone="UTC"),
-    target     = arrow::string(),
-    mean       = arrow::float64(),
-    sd         = arrow::float64(),
-    observed   = arrow::float64(),
-    crps       = arrow::float64(),
-    logs       = arrow::float64(),
-    quantile02.5 = arrow::float64(),
-    quantile10 =arrow::float64(),
-    quantile90 = arrow::float64(),
-    quantile97.5 = arrow::float64(),
-    interval   = arrow::int64(),
-    forecast_start_time = arrow::timestamp("s", timezone="UTC"),
-    horizon    = arrow::float64()
-  )
-}
-
-score_spec <- function() {
-  list(
-    "theme" = readr::col_character(),
-    "team" = readr::col_character(),
-    "issue_date" = readr::col_character(),
-    "site" = readr::col_character(),
-    "x"      = readr::col_double(),
-    "y"     = readr::col_double(),
-    "z"   = readr::col_double(),
-    "time" = readr::col_datetime(),
-    "target"  = readr::col_character(),
-    "mean" = readr::col_double(),
-    "sd" = readr::col_double(),
-    "observed" = readr::col_double(),
-    "crps" = readr::col_double(),
-    "logs" = readr::col_double(),
-    "quantile02.5"= readr::col_double(),
-    "quantile10" = readr::col_double(),
-    "quantile90" = readr::col_double(),
-    "quantile97.5" = readr::col_double(),
-    "interval" = readr::col_integer(),
-    "forecast_start_time" = readr::col_datetime()
-  )
-}
-
-#utils::globalVariables(c("observed", "predicted", "value",
-#                         "variable", "statistic", "sd", 
-#                         "filename"),
-#                       "neon4cast")
+globalVariables(c("crps_team" ,"depth" ,"filename" ,"forecast" ,"height" ,"horizon" ,"latitude",
+                  "logs_team", "longitude" ,"observed" ,"plotID" ,"predicted" ,
+                  "read_forecast" ,"sd" ,"siteID" ,"statistic", "time"), package="score4cast")

@@ -20,5 +20,11 @@ Suggests:
 Config/testthat/edition: 3
 Language: en-US
 Imports: 
+    arrow,
+    readr,
     dplyr,
-    scoringRules
+    ISOweek,
+    scoringRules,
+    tidyr,
+    tidyselect,
+    vctrs
