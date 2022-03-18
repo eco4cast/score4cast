@@ -38,7 +38,7 @@ score_theme <- function(theme,
   
   ## warn about errors (e.g. curl upload failures)
   warnings <- purrr::compact(purrr::map(errors, ~ .x$error$message))
-  purrr::map(warning, warnings)
+  purrr::map(warnings, warning)
   ## message and timing
   options("readr.show_progress"=NULL)
   message(paste("scored", theme, "in", tictoc[[2]]))
