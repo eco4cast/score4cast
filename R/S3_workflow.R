@@ -156,3 +156,25 @@ TARGET_VARS <- c("oxygen",
 
 
 
+
+
+
+## Toggle function, can either use monthly target file or will 
+## download and pivot the big target file
+get_target_s3 <- function(theme, s3_targets, use = "combined") {
+  
+  if(use == "monthly"){
+    path <- s3_targets$path(glue::glue("{theme}/monthly", theme=theme))
+    target <- arrow::open_dataset(path, format="csv", 
+                                  skip_rows = 1, schema = target_schema) 
+  } else {
+    
+    path <- s3_targets$path(glue::glue("{theme}/{theme}-targets.csv.gz", theme=theme))
+    target <- arrow::open_dataset(path, format="csv") %>% 
+      dplyr::collect() %>%
+      mutate(project = theme) %>%
+      pivot_target(TARGET_VARS)
+  }
+  
+  target
+}
