@@ -57,9 +57,9 @@ get_target <- function(theme, endpoint) {
                      theme=theme, endpoint = endpoint)
   target <- 
     readr::read_csv(path, show_col_types = FALSE) %>% 
-    pivot_target(TARGET_VARS) %>% 
-    mutate(theme = theme)
-  
+    mutate(theme = theme) %>%
+    pivot_target(TARGET_VARS) 
+  target
 }
 
 get_forecasts <- function(s3_forecasts, theme, endpoint) {
@@ -165,7 +165,8 @@ target_schema <- arrow::schema(
 ## Should become optional to pivot_forecast()
 TARGET_VARS <- c("oxygen", 
                  "temperature", "richness", "abundance", "nee", "le", "vswc", 
-                 "gcc_90", "rcc_90", "ixodes_scapularis", "amblyomma_americanum")
+                 "gcc_90", "rcc_90", "ixodes_scapularis", "amblyomma_americanum",
+                 "Amblyomma americanum")
 
 
 
