@@ -1,4 +1,8 @@
 
+# FIXME pivot only if `variable` column not present
+# (i.e. so scoring works with new standard long-form)
+# FIXME rename `target` column to `variable`
+
 # standardizes format, 
 # pivots to long form
 # deduplicates predictions
