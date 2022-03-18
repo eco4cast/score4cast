@@ -57,7 +57,7 @@ get_target <- function(theme, endpoint) {
                      theme=theme, endpoint = endpoint)
   target <- 
     readr::read_csv(path, show_col_types = FALSE) %>% 
-    mutate(theme = theme) %>%
+    mutate(project = theme) %>%
     pivot_target(TARGET_VARS) 
   target
 }
@@ -141,28 +141,14 @@ prov_add <- function(id, s3_prov) {
 
 score_dest <- function(forecast_file, s3_scores, type="parquet"){ 
   out <- tools::file_path_sans_ext(basename(forecast_file), compression = TRUE)
-  theme <- strsplit(out, "-")[[1]][[1]]
+  project <- strsplit(out, "-")[[1]][[1]]
   year <-  strsplit(out, "-")[[1]][[2]]
-  path <- paste(type, theme, year, paste0(out, ".", type), sep="/")
+  path <- paste(type, project, year, paste0(out, ".", type), sep="/")
   
   s3_scores$path(path)
 }
 
-## Facilitate reading in targets
-target_schema <- arrow::schema(
-  site       = arrow::string(),
-  x          = arrow::float64(),
-  y          = arrow::float64(),
-  z          = arrow::float64(),
-  time       = arrow::timestamp("us", "UTC"),
-  target     = arrow::string(), # should become "variable"
-  observed   = arrow::float64(),
-  theme      = arrow::string()
-  # year = arrow::int32()     ## can't use yet, see: https://issues.apache.org/jira/browse/ARROW-15879?filter=-2
-)
-
-
-## Should become optional to pivot_forecast()
+## Optional once forecasts and targets files use long variable format
 TARGET_VARS <- c("oxygen", 
                  "temperature", "richness", "abundance", "nee", "le", "vswc", 
                  "gcc_90", "rcc_90", "ixodes_scapularis", "amblyomma_americanum",

@@ -25,36 +25,35 @@
 #' @param null_team the "team" name identifying the baseline (null) forecast
 #' used for filling missing values.  
 fill_scores <- function(df, null_team = "EFInull") {
+  df <- df %>% filter(!is.na(observed)) %>% collect()
   
-  ## effectively assumes a single theme.
-  null <- df %>% 
-    filter(team == null_team) %>%
-    select("theme", "target", "x","y","z", "site", "time",
+  team <- distinct(df,team)
+  if (is.na(null_team)) {
+    x <- pull(team,team)
+    null_team <- x[grepl("null", x)]
+  }
+  
+  null <- df %>%
+    filter(model == null_team) %>%
+    select("project", "variable", "x","y","z", "site", "time",
            "forecast_start_time", "crps", "logs")
-  all <- tidyr::expand_grid(null, distinct(df,team))
-  na_filled <- dplyr::left_join(all, df,
-                         by = c("theme", "team", "target", "x","y","z",
+  all <- tidyr::expand_grid(null, team)
+  na_filled <- left_join(all, df,
+                         by = c("project", "model", "variable", "x","y","z",
                                 "site", "time", "forecast_start_time"),
                          suffix = c("_null", "_team"))
-  null_filled <- na_filled %>% 
-    dplyr::mutate(
-    crps = dplyr::case_when(is.na(crps_team) ~ crps_null,
+  null_filled <- na_filled %>% mutate(
+    crps = case_when(is.na(crps_team) ~ crps_null,
                      !is.na(crps_team) ~ crps_team),
-    logs = dplyr::case_when(is.na(logs_team) ~ logs_null,
-                     !is.na(logs_team) ~ logs_team))%>% 
-    dplyr::select(-crps_null, -logs_null)
+    logs = case_when(is.na(logs_team) ~ logs_null,
+                     !is.na(logs_team) ~ logs_team)) %>%
+    select(-crps_null, -logs_null)
   
-  null_filled
+  ## express difftimes in days, not seconds
+  null_filled %>% mutate(interval = as.numeric(interval, units="days"),
+                         horizon = as.numeric(horizon, units="days"))
+  
 }
-
-
-
-
-
-
-
-
-
 
 
 #' mean_scores
@@ -69,17 +68,18 @@ fill_scores <- function(df, null_team = "EFInull") {
 mean_scores <- function(df){
 
   df %>% 
-    dplyr::group_by(team, target) %>%
+    dplyr::group_by(model, variable) %>%
     dplyr::summarise(crps = mean(crps),
               logs = mean(logs),
               sample_crps = mean(crps_team, na.rm=TRUE),
               sample_logs = mean(logs_team, na.rm=TRUE),
-              percent_NA = mean(is.na(crps_team)), .groups = "drop") 
+              percent_NA = mean(is.na(crps_team)),
+              .groups = "drop") 
   
 }
 
 
 globalVariables(c("crps", "crps_self", "filled_crps", "filled_logs",
                   "forecast_start_time", "logs", "mean_crps", "null_filled_crps",
-                  "null_filled_logs", "target", "team", "theme",
+                  "null_filled_logs", "variable", 
                   "crps_null", "logs_null"), "score4cast")
