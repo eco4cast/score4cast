@@ -27,4 +27,7 @@ Imports:
     scoringRules,
     tidyr,
     tidyselect,
-    vctrs
+    vctrs,
+    read4cast (>= 0.0.0.9000)
+Remotes:  
+    github::eco4cast/read4cast

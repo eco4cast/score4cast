@@ -33,7 +33,7 @@ score <- function(forecast,
   ## read from file if necessary
   if(is.character(forecast)){
     filename <- forecast
-    forecast <- read_forecast(forecast) %>% 
+    forecast <- read4cast::read_forecast(forecast) %>% 
       mutate(filename = filename)
   }
   ## tables must declare theme and be in "long" form:
