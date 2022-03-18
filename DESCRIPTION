@@ -14,9 +14,6 @@ License: Apache License (>= 2)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
-Suggests: 
-    spelling,
-    testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Language: en-US
 Imports: 
@@ -26,8 +23,17 @@ Imports:
     ISOweek,
     scoringRules,
     tidyr,
-    tidyselect,
-    vctrs,
     read4cast (>= 0.0.0.9000)
+Suggests:
+    bench,
+    glue,
+    lubridate,
+    purrr,
+    rlang,
+    spelling,
+    stringr,
+    testthat (>= 3.0.0),
+    tidyselect,
+    vctrs
 Remotes:  
     github::eco4cast/read4cast
