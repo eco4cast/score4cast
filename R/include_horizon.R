@@ -21,8 +21,8 @@ include_horizon <- function(df,
     mutate(horizon = time - forecast_start_time)
   
   if(!allow_difftime){
-    df <- df %>% mutate(horizon = as.numeric(horizon, units="seconds"),
-                        interval = as.numeric(interval, units="seconds"))
+    df <- df %>% mutate(horizon = as.numeric(lubridate::as_duration(horizon), units="seconds"),
+                        interval = as.numeric(lubridate::as_duration(interval), units="seconds"))
   }
   df
 }

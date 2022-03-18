@@ -2,7 +2,7 @@
 ## score_it is batch-oriented: takes a large batch of forecast files,
 ## outputs scores to disk.  This avoid the need to store all forecasts and
 ## scores in working RAM at the same time.
-score_it <- function(targets_file, 
+old_score_it <- function(targets_file, 
                      forecast_files, 
                      dir = "scores",
                      target_vars = c("oxygen", 

@@ -55,8 +55,8 @@ get_target <- function(theme, endpoint) {
   
   path <- glue::glue("https://{endpoint}/targets/{theme}/{theme}-targets.csv.gz",
                      theme=theme, endpoint = endpoint)
-  target <- readr::read_csv(path)  
-  pivot_target(target, TARGET_VARS)
+  target <- readr::read_csv(path, show_col_types = FALSE)  
+  pivot_target(target, TARGET_VARS) %>% mutate(theme = theme)
   
 }
 
