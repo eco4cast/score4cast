@@ -38,12 +38,18 @@ score_theme <- function(theme,
   
   ## warn about errors (e.g. curl upload failures)
   warnings <- purrr::compact(purrr::map(errors, ~ .x$error$message))
-  purrr::map(warnings, warning)
+  purrr::map(warnings, warning, call.=FALSE)
   ## message and timing
   options("readr.show_progress"=NULL)
   message(paste("scored", theme, "in", tictoc[[2]]))
   
 }
+
+## Optional once forecasts and targets files use long variable format
+TARGET_VARS <- c("oxygen", 
+                 "temperature", "richness", "abundance", "nee", "le", "vswc", 
+                 "gcc_90", "rcc_90", "ixodes_scapularis", "amblyomma_americanum",
+                 "Amblyomma americanum")
 
 
 get_target <- function(theme, endpoint) {
@@ -92,7 +98,7 @@ score_if <- function(forecast_file,
 ) {
   forecast_df <- 
     read4cast::read_forecast(forecast_file) %>% 
-    mutate(filename = forecast_file)
+    mutate(filename = basename(forecast_file))
   target_df <- subset_target(forecast_df, target)
   id <- rlang::hash(list(forecast_df, target_df))
   # score only unique combinations of subset of targets + forecast
@@ -148,11 +154,6 @@ score_dest <- function(forecast_file, s3_scores, type="parquet"){
   s3_scores$path(path)
 }
 
-## Optional once forecasts and targets files use long variable format
-TARGET_VARS <- c("oxygen", 
-                 "temperature", "richness", "abundance", "nee", "le", "vswc", 
-                 "gcc_90", "rcc_90", "ixodes_scapularis", "amblyomma_americanum",
-                 "Amblyomma americanum")
 
 
 

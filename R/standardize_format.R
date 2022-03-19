@@ -20,7 +20,7 @@ standardize_format <- function(df, target_vars) {
   
   column_names <- c("project", "model",
                     "issue_date", "site", "x", "y", "z", "time",
-                    "variable", "ensemble", "statistic")
+                    "variable", "ensemble", "statistic", target_vars)
   #GENERALIZATION:  This is a theme specific hack. How do we generalize?
   ## Put tick + beetles dates to ISOweek
   if ("project" %in% colnames(df) && 
@@ -81,7 +81,7 @@ split_filename <- function(df){
     df <- df %>% 
       mutate(project = gsub(pattern, "\\1", basename(filename)),
              issue_date = gsub(pattern, "\\2", basename(filename)),
-             forecst_model_id = gsub(pattern, "\\3", basename(filename)))
+             model = gsub(pattern, "\\3", basename(filename)))
   }
   df
 }
