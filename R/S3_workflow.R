@@ -24,25 +24,32 @@ score_theme <- function(theme,
                         s3_prov, 
                         endpoint){
   
+
+  
   options("readr.show_progress"=FALSE)
   target <- get_target(theme, endpoint)
   forecast_urls <- get_forecasts(s3_forecasts, theme, endpoint)
   
-  tictoc <- bench::bench_time({
+  pb <- progress::progress_bar$new(
+    format = glue::glue("  scoring {theme} [:bar] :percent in :elapsed,",
+                        " eta: :eta"),
+    total = length(forecast_urls), 
+    clear = FALSE, width= 80)
+
     errors <- forecast_urls %>% 
-      purrr::map(score_safely, 
-                 target, 
-                 s3_prov, 
-                 s3_scores)
-  })
+      purrr::map(function(x) {
+        pb$tick()
+        suppressMessages({
+        score_safely(x, target, s3_prov, s3_scores)
+        })
+      })
   
   ## warn about errors (e.g. curl upload failures)
   warnings <- purrr::compact(purrr::map(errors, ~ .x$error$message))
   purrr::map(warnings, warning, call.=FALSE)
   ## message and timing
   options("readr.show_progress"=NULL)
-  message(paste("scored", theme, "in", tictoc[[2]]))
-  
+
 }
 
 ## Optional once forecasts and targets files use long variable format

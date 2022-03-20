@@ -28,6 +28,7 @@ Suggests:
     bench,
     glue,
     lubridate,
+    progress,
     purrr,
     rlang,
     spelling,
