@@ -18,7 +18,7 @@ This connection requires write access, e.g. by specifying}
 
 \item{s3_prov}{a connection from \link[arrow:s3_bucket]{arrow::s3_bucket}}
 
-\item{endpoint}{domain name for forecast download URL}
+\item{endpoint}{domain name for forecast/target download URL}
 }
 \description{
 A helper utility to score a collection of forecasts efficiently

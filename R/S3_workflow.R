@@ -49,7 +49,7 @@ score_theme <- function(theme,
   purrr::map(warnings, warning, call.=FALSE)
   ## message and timing
   options("readr.show_progress"=NULL)
-
+  invisible(errors)
 }
 
 ## Optional once forecasts and targets files use long variable format
@@ -70,7 +70,7 @@ get_target <- function(theme, endpoint) {
                      theme=theme, endpoint = endpoint)
   target <- 
     readr::read_csv(path, show_col_types = FALSE) %>% 
-    mutate(project = theme) %>%
+    mutate(target_id = theme) %>%
     pivot_target(TARGET_VARS) 
   target
 }
@@ -154,9 +154,9 @@ prov_add <- function(id, s3_prov) {
 
 score_dest <- function(forecast_file, s3_scores, type="parquet"){ 
   out <- tools::file_path_sans_ext(basename(forecast_file), compression = TRUE)
-  project <- strsplit(out, "-")[[1]][[1]]
+  target_id <- strsplit(out, "-")[[1]][[1]]
   year <-  strsplit(out, "-")[[1]][[2]]
-  path <- paste(type, project, year, paste0(out, ".", type), sep="/")
+  path <- paste(type, target_id, year, paste0(out, ".", type), sep="/")
   
   s3_scores$path(path)
 }
@@ -180,7 +180,7 @@ get_target_s3 <- function(theme, s3_targets, use = "combined") {
     path <- s3_targets$path(glue::glue("{theme}/{theme}-targets.csv.gz", theme=theme))
     target <- arrow::open_dataset(path, format="csv") %>% 
       dplyr::collect() %>%
-      mutate(project = theme) %>%
+      mutate(target_id = theme) %>%
       pivot_target(TARGET_VARS)
   }
   

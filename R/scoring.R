@@ -38,11 +38,11 @@ score <- function(forecast,
   }
   ## tables must declare theme and be in "long" form:
   target <- readr::read_csv(target) %>% 
-    dplyr::mutate(theme = theme) %>%
+    dplyr::mutate(target_id = theme) %>%
     pivot_target(target_vars)
   
   forecast <- forecast %>% 
-    dplyr::mutate(theme=theme) %>%
+    dplyr::mutate(target_id = theme) %>%
     pivot_forecast(target_vars)
   
   crps_logs_score(forecast, target)

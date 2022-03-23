@@ -4,7 +4,7 @@
 \alias{pivot_target}
 \title{pivot target}
 \usage{
-pivot_target(df, target_vars = "")
+pivot_target(df, target_vars = NULL)
 }
 \arguments{
 \item{df}{standardized target data.frame in wide format}

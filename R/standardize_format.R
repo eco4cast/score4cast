@@ -6,36 +6,42 @@ standardize_format <- function(df, target_vars) {
   renamer <- function(x) {
     vapply(x, function(n) switch(n,
                                 "target" = "variable",
-                                "siteID" = "site",
+                                "siteID" = "site_id",
                                 "latitude" = "y",
                                 "lognitude" = "x",
                                 "depth" = "z",
                                 "height" = "z",
-                                "theme"  = "project",
-                                "team"   = "model",
+                                "theme"  = "target_id",
+                                "team"   = "model_id",
+                                "forecast_start_time" = "start_time",
+                                "issue_date" = "pub_time",
                                 n),
            "", USE.NAMES = FALSE)
   }
   df <- dplyr::rename_with(df,renamer)
   
-  column_names <- c("project", "model",
-                    "issue_date", "site", "x", "y", "z", "time",
+  column_names <- c("target_id", "model_id", "start_time",
+                    "pub_time", "site_id", "x", "y", "z", "time",
                     "variable", "ensemble", "statistic", target_vars)
+  
+  
   #GENERALIZATION:  This is a theme specific hack. How do we generalize?
   ## Put tick + beetles dates to ISOweek
-  if ("project" %in% colnames(df) && 
-      all(pull(df,project) %in% c("ticks", "beetles"))
+  if ("target_id" %in% colnames(df) && 
+      all(pull(df,target_id) %in% c("ticks", "beetles"))
       ) {
     df <- df %>% 
       mutate(time = isoweek(time))
     if("plotID" %in% names(df)) {
       df <- df %>% 
         select(-siteID) %>%
-        rename(site = plotID)
+        rename(site_id = plotID)
     }
   }
   
-  if(!("site" %in% colnames(df))){
+  
+  
+  if(!("site_id" %in% colnames(df))){
     df <- dplyr::mutate(df, site = NA)
   }
   
@@ -59,7 +65,7 @@ standardize_format <- function(df, target_vars) {
 
 enforce_schema <- function(df) {
   df %>% 
-    mutate(across(any_of(c("time", "forecast_start_time")),
+    mutate(across(any_of(c("time", "start_time")),
                   .fns = as.POSIXct))
 }
 
@@ -79,9 +85,9 @@ split_filename <- function(df){
   if("filename" %in% colnames(df)) {
     pattern <- "(\\w+)\\-(\\d{4}\\-\\d{2}\\-\\d{2})\\-(\\w+)\\.(csv)?(\\.gz)?(nc)?"
     df <- df %>% 
-      mutate(project = gsub(pattern, "\\1", basename(filename)),
-             issue_date = gsub(pattern, "\\2", basename(filename)),
-             model = gsub(pattern, "\\3", basename(filename)))
+      mutate(target_id = gsub(pattern, "\\1", basename(filename)),
+             pub_time = gsub(pattern, "\\2", basename(filename)),
+             model_id = gsub(pattern, "\\3", basename(filename)))
   }
   df
 }
