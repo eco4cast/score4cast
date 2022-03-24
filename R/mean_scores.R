@@ -26,6 +26,7 @@
 #' used for filling missing values.
 #' @importFrom dplyr select collect distinct filter case_when mutate
 #' @importFrom dplyr left_join pull
+#' @export
 fill_scores <- function(df, null_team = "EFInull") {
   df <- df %>% filter(!is.na(observed)) %>% collect()
   
@@ -67,6 +68,7 @@ fill_scores <- function(df, null_team = "EFInull") {
 #' (no self-fill step) may be preferred.  
 #' The number of missing values filled in for each forecast is also reported.
 #' @param df a data frame from fill_scores()
+#' @export
 mean_scores <- function(df){
 
   df %>% 

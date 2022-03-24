@@ -45,7 +45,8 @@ score <- function(forecast,
     dplyr::mutate(target_id = theme) %>%
     pivot_forecast(target_vars)
   
-  crps_logs_score(forecast, target)
+  crps_logs_score(forecast, target) %>%
+    include_horizon()
   
 }
 

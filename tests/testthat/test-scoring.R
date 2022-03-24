@@ -19,9 +19,17 @@ test_that("scoring ncdf files", {
 })
 
 test_that("mean scores", {
-  # NCDF read fails on windows CI, not sure why
-  nc_fc <- "https://data.ecoforecast.org/forecasts/aquatics/"
-  df <- score(nc_fc, "https://data.ecoforecast.org/targets/aquatics/aquatics-targets.csv.gz", theme="terrestrial_30min")
+  fc <- "https://data.ecoforecast.org/forecasts/aquatics/aquatics-2021-05-01-wbears_rnn.csv"
+  df <- score(fc, "https://data.ecoforecast.org/targets/aquatics/aquatics-targets.csv.gz", theme="aquatics")
   expect_true(inherits(df, "data.frame"))
+  null <- "https://data.ecoforecast.org/forecasts/aquatics/aquatics-2021-05-01-EFInull.csv.gz"
+  dn <- score(null, "https://data.ecoforecast.org/targets/aquatics/aquatics-targets.csv.gz", theme="aquatics")
+  expect_true(inherits(dn, "data.frame"))
+  df <- dplyr::bind_rows(df,dn)
+  filled <- fill_scores(df)
+  expect_gt(nrow(filled),0)
+  
+  leaderboard <- mean_scores(filled)
+  expect_gt(nrow(leaderboard),0)
 })
 
