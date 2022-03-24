@@ -8,7 +8,7 @@
 #' sufficient.  A simple expedient is to replace missing values with
 #' predictions made from a baseline 'null' forecast.  This function
 #' simply provides this behavior.  Original forecast scores with missing values 
-#' are retained as `crps_team` and `logs_team` columns, while
+#' are retained as `crps_model` and `logs_model` columns, while
 #' `crps` and `logs` become filled with baseline scores from the null forecast.
 #' 
 #' Note that this fills _implicit_ NAs, e.g. site/time/variables predicted
@@ -22,34 +22,34 @@
 #' 
 #' @param df a data frame of forecasts, with column 
 #' "team" identifying different forecasts.  
-#' @param null_team the "team" name identifying the baseline (null) forecast
+#' @param null_model the "team" name identifying the baseline (null) forecast
 #' used for filling missing values.
 #' @importFrom dplyr select collect distinct filter case_when mutate
 #' @importFrom dplyr left_join pull
 #' @export
-fill_scores <- function(df, null_team = "EFInull") {
+fill_scores <- function(df, null_model = "EFInull") {
   df <- df %>% filter(!is.na(observed)) %>% collect()
   
   team <- distinct(df,model_id)
-  if (is.na(null_team)) {
+  if (is.na(null_model)) {
     x <- pull(team,model_id)
-    null_team <- x[grepl("null", x)]
+    null_model <- x[grepl("null", x)]
   }
   
   null <- df %>%
-    filter(model_id == null_team) %>%
+    filter(model_id == null_model) %>%
     select("target_id", "variable", "x","y","z", "site_id", "time",
            "start_time", "crps", "logs")
   all <- tidyr::expand_grid(null, team)
   na_filled <- left_join(all, df,
                          by = c("target_id", "model_id", "variable", "x","y","z",
                                 "site_id", "time", "start_time"),
-                         suffix = c("_null", "_team"))
+                         suffix = c("_null", "_model"))
   null_filled <- na_filled %>% mutate(
-    crps = case_when(is.na(crps_team) ~ crps_null,
-                     !is.na(crps_team) ~ crps_team),
-    logs = case_when(is.na(logs_team) ~ logs_null,
-                     !is.na(logs_team) ~ logs_team)) %>%
+    crps = case_when(is.na(crps_model) ~ crps_null,
+                     !is.na(crps_model) ~ crps_model),
+    logs = case_when(is.na(logs_model) ~ logs_null,
+                     !is.na(logs_model) ~ logs_model)) %>%
     select(-crps_null, -logs_null)
   
   ## express difftimes in days, not seconds
@@ -75,9 +75,9 @@ mean_scores <- function(df){
     dplyr::group_by(model_id, variable) %>%
     dplyr::summarise(crps = mean(crps),
               logs = mean(logs),
-              sample_crps = mean(crps_team, na.rm=TRUE),
-              sample_logs = mean(logs_team, na.rm=TRUE),
-              percent_NA = mean(is.na(crps_team)),
+              sample_crps = mean(crps_model, na.rm=TRUE),
+              sample_logs = mean(logs_model, na.rm=TRUE),
+              percent_NA = mean(is.na(crps_model)),
               .groups = "drop") 
   
 }
