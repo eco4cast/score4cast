@@ -83,7 +83,5 @@ mean_scores <- function(df){
 }
 
 
-globalVariables(c("crps", "crps_self", "filled_crps", "filled_logs",
-                  "start_time", "logs", "mean_crps", "null_filled_crps",
-                  "null_filled_logs", "variable", 
-                  "crps_null", "logs_null"), "score4cast")
+globalVariables(c("crps_null", "logs_null", 
+                  "crps_model", "logs_model"), "score4cast")

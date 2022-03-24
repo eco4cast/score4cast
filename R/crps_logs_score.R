@@ -21,7 +21,7 @@ crps_logs_score <- function(forecast, target){
     out <- joined %>% 
       group_by(across(-any_of(c("ensemble", "predicted")))) %>% 
       summarise(mean = mean(predicted, na.rm =TRUE),
-                sd = sd(predicted, na.rm =TRUE),
+                sd = stats::sd(predicted, na.rm =TRUE),
                 crps = crps_sample(observed[[1]], na_rm(predicted)),
                 logs = logs_sample(observed[[1]], na_rm(predicted)),
                 quantile02.5 = stats::quantile(predicted, 0.025, na.rm = TRUE),
@@ -77,10 +77,11 @@ logs_norm <- function(y, mean, sd) {
 
 
 
-globalVariables(c("crps_team" ,"depth" ,"filename" ,"forecast",
-                  "height" ,"horizon", "model_id", "target_id",
-                  "logs_team","observed",
-                  "plotID" ,"predicted" , "siteID", "interval",
-                  "read_forecast" ,"sd",
-                  "statistic", "time"), package="score4cast")
+globalVariables(c("crps" ,"filename",
+                  "horizon", "model_id", "target_id",
+                  "logs","observed", "pub_time", "start_time",
+                  "predicted", "variable", "interval",
+                  "statistic", "time",
+                  "mean", "sd", "forecast",
+                  "siteID", "plotID", "height", "depth"), package="score4cast")
 
