@@ -16,6 +16,7 @@ standardize_format <- function(df, target_vars) {
                                 "team"   = "model_id",
                                 "forecast_start_time" = "start_time",
                                 "issue_date" = "pub_time",
+                                "Amblyomma americanum" = "amblyomma_americanum",
                                 n),
            "", USE.NAMES = FALSE)
   }
@@ -35,7 +36,7 @@ standardize_format <- function(df, target_vars) {
       mutate(time = isoweek(time))
     if("plotID" %in% names(df)) {
       df <- df %>% 
-        select(-siteID) %>%
+        select(-any_of("site_id")) %>%
         rename(site_id = plotID)
     }
   }

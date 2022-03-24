@@ -15,18 +15,7 @@ score <- function(forecast,
                   theme = c("aquatics", "beetles",
                            "phenology", "terrestrial_30min",
                            "terrestrial_daily","ticks"),
-                  target_vars = c("oxygen", 
-                                  "temperature", 
-                                  "richness",
-                                  "abundance", 
-                                  "nee",
-                                  "le", 
-                                  "vswc",
-                                  "gcc_90",
-                                  "rcc_90",
-                                  "ixodes_scapularis",
-                                  "amblyomma_americanum",
-                                  "Amblyomma americanum")){
+                  target_vars = TARGET_VARS){
   
   theme = match.arg(theme)
   
@@ -37,7 +26,10 @@ score <- function(forecast,
       mutate(filename = filename)
   }
   ## tables must declare theme and be in "long" form:
-  target <- readr::read_csv(target) %>% 
+  if(!inherits(target, "data.frame")) {
+    target <- readr::read_csv(target)
+  }
+  target <- target %>% 
     dplyr::mutate(target_id = theme) %>%
     pivot_target(target_vars)
   
