@@ -21,7 +21,7 @@ test_that("ticks scores", {
   crps_logs_score(forecast, target) %>% filter(!is.na(observed))
   
   
-  df <- score(forecast_df, "https://data.ecoforecast.org/targets/ticks/ticks-targets.csv.gz")
+  df <- score(fc, "https://data.ecoforecast.org/targets/ticks/ticks-targets.csv.gz")
   expect_true(inherits(df, "data.frame"))
   
 })
