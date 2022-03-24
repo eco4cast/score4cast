@@ -12,18 +12,19 @@ test_that("ticks scores", {
   
   fc <- "https://data.ecoforecast.org/forecasts/ticks/ticks-2021-03-31-SynergisTicks.csv"
   target <- readr::read_csv("https://data.ecoforecast.org/targets/ticks/ticks-targets.csv.gz") %>%
-    pivot_target(target_vars = TARGET_VARS) %>% 
-    mutate(target_id = "ticks")
+    mutate(target_id = "ticks") %>% 
+    pivot_target(target_vars = TARGET_VARS)
   forecast_df <- read4cast::read_forecast(fc)
   forecast <- forecast_df %>% 
     mutate(filename= basename(fc)) %>%
     pivot_forecast(target_vars = TARGET_VARS)
-  crps_logs_score(forecast, target) %>% filter(!is.na(observed))
+  crps_logs_score(forecast, target) %>% filter(!is.na(crps))
   
   
-  df <- score(fc, "https://data.ecoforecast.org/targets/ticks/ticks-targets.csv.gz")
+  df <- score(fc, "https://data.ecoforecast.org/targets/ticks/ticks-targets.csv.gz",
+              theme = "ticks") %>% filter(!is.na(crps))
   expect_true(inherits(df, "data.frame"))
-  
+  df
 })
 
 test_that("scoring ncdf files", {

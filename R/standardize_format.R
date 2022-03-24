@@ -34,11 +34,13 @@ standardize_format <- function(df, target_vars) {
       ) {
     df <- df %>% 
       mutate(time = isoweek(time))
-    if("plotID" %in% names(df)) {
-      df <- df %>% 
-        select(-any_of("site_id")) %>%
-        rename(site_id = plotID)
-    }
+    
+### DEPRECATATED ticks pools up to siteID instead
+#    if("plotID" %in% names(df)) {
+#      df <- df %>% 
+#        select(-any_of("site_id")) %>%
+#        rename(site_id = plotID)
+#    }
   }
   
   
