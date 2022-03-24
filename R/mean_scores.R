@@ -23,18 +23,20 @@
 #' @param df a data frame of forecasts, with column 
 #' "team" identifying different forecasts.  
 #' @param null_team the "team" name identifying the baseline (null) forecast
-#' used for filling missing values.  
+#' used for filling missing values.
+#' @importFrom dplyr select collect distinct filter case_when mutate
+#' @importFrom dplyr left_join pull
 fill_scores <- function(df, null_team = "EFInull") {
   df <- df %>% filter(!is.na(observed)) %>% collect()
   
-  team <- distinct(df,team)
+  team <- distinct(df,model_id)
   if (is.na(null_team)) {
-    x <- pull(team,team)
+    x <- pull(team,model_id)
     null_team <- x[grepl("null", x)]
   }
   
   null <- df %>%
-    filter(model == null_team) %>%
+    filter(model_id == null_team) %>%
     select("target_id", "variable", "x","y","z", "site_id", "time",
            "start_time", "crps", "logs")
   all <- tidyr::expand_grid(null, team)
@@ -68,7 +70,7 @@ fill_scores <- function(df, null_team = "EFInull") {
 mean_scores <- function(df){
 
   df %>% 
-    dplyr::group_by(model, variable) %>%
+    dplyr::group_by(model_id, variable) %>%
     dplyr::summarise(crps = mean(crps),
               logs = mean(logs),
               sample_crps = mean(crps_team, na.rm=TRUE),

@@ -49,7 +49,7 @@ score_theme <- function(theme,
   purrr::map(warnings, warning, call.=FALSE)
   ## message and timing
   options("readr.show_progress"=NULL)
-  unscored <- purrr::map_lgl(purrr::map(errors, results),is.null)
+  unscored <- purrr::map_lgl(purrr::map(errors, "result"),is.null)
   error <- purrr::map(errors[unscored], "error")
   invisible(list(urls = forecast_urls[unscored], error = error))
 }
@@ -175,8 +175,7 @@ get_target_s3 <- function(theme, s3_targets, use = "combined") {
   
   if(use == "monthly"){
     path <- s3_targets$path(glue::glue("{theme}/monthly", theme=theme))
-    target <- arrow::open_dataset(path, format="csv", 
-                                  skip_rows = 1, schema = target_schema) 
+    target <- arrow::open_dataset(path, format="csv") # probably needs schema if we use this 
   } else {
     
     path <- s3_targets$path(glue::glue("{theme}/{theme}-targets.csv.gz", theme=theme))

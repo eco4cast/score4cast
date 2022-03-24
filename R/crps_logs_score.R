@@ -78,9 +78,9 @@ logs_norm <- function(y, mean, sd) {
 
 
 globalVariables(c("crps_team" ,"depth" ,"filename" ,"forecast",
-                  "height" ,"horizon",
+                  "height" ,"horizon", "model_id", "target_id",
                   "logs_team","observed",
-                  "plotID" ,"predicted" ,
+                  "plotID" ,"predicted" , "siteID", "interval",
                   "read_forecast" ,"sd",
                   "statistic", "time"), package="score4cast")
 

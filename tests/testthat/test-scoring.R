@@ -17,3 +17,11 @@ test_that("scoring ncdf files", {
   df <- score(nc_fc, "https://data.ecoforecast.org/targets/aquatics/aquatics-targets.csv.gz", theme="terrestrial_30min")
   expect_true(inherits(df, "data.frame"))
 })
+
+test_that("mean scores", {
+  # NCDF read fails on windows CI, not sure why
+  nc_fc <- "https://data.ecoforecast.org/forecasts/aquatics/"
+  df <- score(nc_fc, "https://data.ecoforecast.org/targets/aquatics/aquatics-targets.csv.gz", theme="terrestrial_30min")
+  expect_true(inherits(df, "data.frame"))
+})
+
