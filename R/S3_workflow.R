@@ -45,11 +45,13 @@ score_theme <- function(theme,
       })
   
   ## warn about errors (e.g. curl upload failures)
-  warnings <- purrr::compact(purrr::map(errors, ~ .x$error$message))
+  warnings <- unique(purrr::compact(purrr::map(errors, ~ .x$error$message)))
   purrr::map(warnings, warning, call.=FALSE)
   ## message and timing
   options("readr.show_progress"=NULL)
-  invisible(errors)
+  unscored <- purrr::map_lgl(purrr::map(errors, results),is.null)
+  error <- purrr::map(errors[unscored], "error")
+  invisible(list(urls = forecast_urls[unscored], error = error))
 }
 
 ## Optional once forecasts and targets files use long variable format
