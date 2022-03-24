@@ -7,6 +7,7 @@ standardize_format <- function(df, target_vars) {
     vapply(x, function(n) switch(n,
                                 "target" = "variable",
                                 "siteID" = "site_id",
+                                "site"   = "site_id",
                                 "latitude" = "y",
                                 "lognitude" = "x",
                                 "depth" = "z",
