@@ -8,7 +8,7 @@
 #' sufficient.  A simple expedient is to replace missing values with
 #' predictions made from a baseline 'null' forecast.  This function
 #' simply provides this behavior.  Original forecast scores with missing values 
-#' are retained as `crps_team` and `logs_team` columns, while
+#' are retained as `crps_model` and `logs_model` columns, while
 #' `crps` and `logs` become filled with baseline scores from the null forecast.
 #' 
 #' Note that this fills _implicit_ NAs, e.g. site/time/variables predicted
@@ -22,39 +22,41 @@
 #' 
 #' @param df a data frame of forecasts, with column 
 #' "team" identifying different forecasts.  
-#' @param null_team the "team" name identifying the baseline (null) forecast
-#' used for filling missing values.  
-fill_scores <- function(df, null_team = "EFInull") {
+#' @param null_model the "team" name identifying the baseline (null) forecast
+#' used for filling missing values.
+#' @importFrom dplyr select collect distinct filter case_when mutate
+#' @importFrom dplyr left_join pull
+#' @export
+fill_scores <- function(df, null_model = "EFInull") {
+  df <- df %>% filter(!is.na(observed)) %>% collect()
   
-  ## effectively assumes a single theme.
-  null <- df %>% 
-    filter(team == null_team) %>%
-    select("theme", "target", "x","y","z", "site", "time",
-           "forecast_start_time", "crps", "logs")
-  all <- tidyr::expand_grid(null, distinct(df,team))
-  na_filled <- dplyr::left_join(all, df,
-                         by = c("theme", "team", "target", "x","y","z",
-                                "site", "time", "forecast_start_time"),
-                         suffix = c("_null", "_team"))
-  null_filled <- na_filled %>% 
-    dplyr::mutate(
-    crps = dplyr::case_when(is.na(crps_team) ~ crps_null,
-                     !is.na(crps_team) ~ crps_team),
-    logs = dplyr::case_when(is.na(logs_team) ~ logs_null,
-                     !is.na(logs_team) ~ logs_team))%>% 
-    dplyr::select(-crps_null, -logs_null)
+  team <- distinct(df,model_id)
+  if (is.na(null_model)) {
+    x <- pull(team,model_id)
+    null_model <- x[grepl("null", x)]
+  }
   
-  null_filled
+  null <- df %>%
+    filter(model_id == null_model) %>%
+    select("target_id", "variable", "x","y","z", "site_id", "time",
+           "start_time", "crps", "logs")
+  all <- tidyr::expand_grid(null, team)
+  na_filled <- left_join(all, df,
+                         by = c("target_id", "model_id", "variable", "x","y","z",
+                                "site_id", "time", "start_time"),
+                         suffix = c("_null", "_model"))
+  null_filled <- na_filled %>% mutate(
+    crps = case_when(is.na(crps_model) ~ crps_null,
+                     !is.na(crps_model) ~ crps_model),
+    logs = case_when(is.na(logs_model) ~ logs_null,
+                     !is.na(logs_model) ~ logs_model)) %>%
+    select(-crps_null, -logs_null)
+  
+  ## express difftimes in days, not seconds
+  null_filled %>% mutate(interval = as.numeric(interval, units="days"),
+                         horizon = as.numeric(horizon, units="days"))
+  
 }
-
-
-
-
-
-
-
-
-
 
 
 #' mean_scores
@@ -66,20 +68,20 @@ fill_scores <- function(df, null_team = "EFInull") {
 #' (no self-fill step) may be preferred.  
 #' The number of missing values filled in for each forecast is also reported.
 #' @param df a data frame from fill_scores()
+#' @export
 mean_scores <- function(df){
 
   df %>% 
-    dplyr::group_by(team, target) %>%
+    dplyr::group_by(model_id, variable) %>%
     dplyr::summarise(crps = mean(crps),
               logs = mean(logs),
-              sample_crps = mean(crps_team, na.rm=TRUE),
-              sample_logs = mean(logs_team, na.rm=TRUE),
-              percent_NA = mean(is.na(crps_team)), .groups = "drop") 
+              sample_crps = mean(crps_model, na.rm=TRUE),
+              sample_logs = mean(logs_model, na.rm=TRUE),
+              percent_NA = mean(is.na(crps_model)),
+              .groups = "drop") 
   
 }
 
 
-globalVariables(c("crps", "crps_self", "filled_crps", "filled_logs",
-                  "forecast_start_time", "logs", "mean_crps", "null_filled_crps",
-                  "null_filled_logs", "target", "team", "theme",
-                  "crps_null", "logs_null"), "score4cast")
+globalVariables(c("crps_null", "logs_null", 
+                  "crps_model", "logs_model"), "score4cast")

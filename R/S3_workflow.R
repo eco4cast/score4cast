@@ -24,26 +24,41 @@ score_theme <- function(theme,
                         s3_prov, 
                         endpoint){
   
+
+  
   options("readr.show_progress"=FALSE)
   target <- get_target(theme, endpoint)
   forecast_urls <- get_forecasts(s3_forecasts, theme, endpoint)
   
-  tictoc <- bench::bench_time({
+  pb <- progress::progress_bar$new(
+    format = glue::glue("  scoring {theme} [:bar] :percent in :elapsed,",
+                        " eta: :eta"),
+    total = length(forecast_urls), 
+    clear = FALSE, width= 80)
+
     errors <- forecast_urls %>% 
-      purrr::map(score_safely, 
-                 target, 
-                 s3_prov, 
-                 s3_scores)
-  })
+      purrr::map(function(x) {
+        pb$tick()
+        suppressMessages({
+        score_safely(x, target, s3_prov, s3_scores)
+        })
+      })
   
   ## warn about errors (e.g. curl upload failures)
-  warnings <- purrr::compact(purrr::map(errors, ~ .x$error$message))
-  purrr::map(warnings, warning)
+  warnings <- unique(purrr::compact(purrr::map(errors, ~ .x$error$message)))
+  purrr::map(warnings, warning, call.=FALSE)
   ## message and timing
   options("readr.show_progress"=NULL)
-  message(paste("scored", theme, "in", tictoc[[2]]))
-  
+  unscored <- purrr::map_lgl(purrr::map(errors, "result"),is.null)
+  error <- purrr::map(errors[unscored], "error")
+  invisible(list(urls = forecast_urls[unscored], error = error))
 }
+
+## Optional once forecasts and targets files use long variable format
+TARGET_VARS <- c("oxygen", 
+                 "temperature", "richness", "abundance", "nee", "le", "vswc", 
+                 "gcc_90", "rcc_90", "ixodes_scapularis", "amblyomma_americanum",
+                 "Amblyomma americanum")
 
 
 get_target <- function(theme, endpoint) {
@@ -57,7 +72,7 @@ get_target <- function(theme, endpoint) {
                      theme=theme, endpoint = endpoint)
   target <- 
     readr::read_csv(path, show_col_types = FALSE) %>% 
-    mutate(theme = theme) %>%
+    mutate(target_id = theme) %>%
     pivot_target(TARGET_VARS) 
   target
 }
@@ -92,7 +107,7 @@ score_if <- function(forecast_file,
 ) {
   forecast_df <- 
     read4cast::read_forecast(forecast_file) %>% 
-    mutate(filename = forecast_file)
+    mutate(filename = basename(forecast_file))
   target_df <- subset_target(forecast_df, target)
   id <- rlang::hash(list(forecast_df, target_df))
   # score only unique combinations of subset of targets + forecast
@@ -141,32 +156,34 @@ prov_add <- function(id, s3_prov) {
 
 score_dest <- function(forecast_file, s3_scores, type="parquet"){ 
   out <- tools::file_path_sans_ext(basename(forecast_file), compression = TRUE)
-  theme <- strsplit(out, "-")[[1]][[1]]
+  target_id <- strsplit(out, "-")[[1]][[1]]
   year <-  strsplit(out, "-")[[1]][[2]]
-  path <- paste(type, theme, year, paste0(out, ".", type), sep="/")
+  path <- paste(type, target_id, year, paste0(out, ".", type), sep="/")
   
   s3_scores$path(path)
 }
 
-## Facilitate reading in targets
-target_schema <- arrow::schema(
-  site       = arrow::string(),
-  x          = arrow::float64(),
-  y          = arrow::float64(),
-  z          = arrow::float64(),
-  time       = arrow::timestamp("us", "UTC"),
-  target     = arrow::string(), # should become "variable"
-  observed   = arrow::float64(),
-  theme      = arrow::string()
-  # year = arrow::int32()     ## can't use yet, see: https://issues.apache.org/jira/browse/ARROW-15879?filter=-2
-)
-
-
-## Should become optional to pivot_forecast()
-TARGET_VARS <- c("oxygen", 
-                 "temperature", "richness", "abundance", "nee", "le", "vswc", 
-                 "gcc_90", "rcc_90", "ixodes_scapularis", "amblyomma_americanum",
-                 "Amblyomma americanum")
 
 
 
+
+
+
+## Toggle function, can either use monthly target file or will 
+## download and pivot the big target file
+get_target_s3 <- function(theme, s3_targets, use = "combined") {
+  
+  if(use == "monthly"){
+    path <- s3_targets$path(glue::glue("{theme}/monthly", theme=theme))
+    target <- arrow::open_dataset(path, format="csv") # probably needs schema if we use this 
+  } else {
+    
+    path <- s3_targets$path(glue::glue("{theme}/{theme}-targets.csv.gz", theme=theme))
+    target <- arrow::open_dataset(path, format="csv") %>% 
+      dplyr::collect() %>%
+      mutate(target_id = theme) %>%
+      pivot_target(TARGET_VARS)
+  }
+  
+  target
+}

@@ -11,18 +11,17 @@
 #' @export
 crps_logs_score <- function(forecast, target){
   
-  ## FIXME ensure either both or none have "theme", "issue_date", "team"
   # left join will keep predictions even where we have no observations
   joined <- dplyr::left_join(forecast, 
                              target, 
-                             by = c("theme", "site", "x", "y",
-                                    "z", "time", "target"))
+                             by = c("target_id", "site_id", "x", "y",
+                                    "z", "time", "variable"))
   
   if("ensemble" %in% colnames(joined)){
     out <- joined %>% 
       group_by(across(-any_of(c("ensemble", "predicted")))) %>% 
       summarise(mean = mean(predicted, na.rm =TRUE),
-                sd = sd(predicted, na.rm =TRUE),
+                sd = stats::sd(predicted, na.rm =TRUE),
                 crps = crps_sample(observed[[1]], na_rm(predicted)),
                 logs = logs_sample(observed[[1]], na_rm(predicted)),
                 quantile02.5 = stats::quantile(predicted, 0.025, na.rm = TRUE),
@@ -43,12 +42,13 @@ crps_logs_score <- function(forecast, target){
   }
   
   ## Ensure both ensemble and stat-based have identical column order:
-  out %>% select(any_of(c("theme", "team", "issue_date", "site",
+  out %>% select(any_of(c("target_id", "model_id",
+                          "pub_time", "site_id",
                           "x", "y", "z", "time",
-                          "target", "mean", "sd", "observed", "crps",
+                          "variable", "mean", "sd", "observed", "crps",
                           "logs", "quantile02.5", "quantile10",
                           "quantile90","quantile97.5","interval", 
-                          "forecast_start_time")))
+                          "start_time")))
 }
 
 
@@ -77,10 +77,11 @@ logs_norm <- function(y, mean, sd) {
 
 
 
-globalVariables(c("crps_team" ,"depth" ,"filename" ,"forecast",
-                  "height" ,"horizon" ,"latitude",
-                  "logs_team", "longitude" ,"observed",
-                  "plotID" ,"predicted" ,
-                  "read_forecast" ,"sd" ,"siteID",
-                  "statistic", "time"), package="score4cast")
+globalVariables(c("crps" ,"filename",
+                  "horizon", "model_id", "target_id",
+                  "logs","observed", "pub_time", "start_time",
+                  "predicted", "variable", "interval",
+                  "statistic", "time",
+                  "mean", "sd", "forecast",
+                  "siteID", "plotID", "height", "depth"), package="score4cast")
 

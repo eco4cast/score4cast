@@ -8,17 +8,17 @@ include_horizon <- function(df,
                             allow_difftime = getOption("neon4cast.allow_difftime", FALSE)){
   
   interval <- df %>%
-    group_by(across(any_of(c("theme", "team", "issue_date", 
-                             "target", "site", "x", "y", "z")))) %>% 
-    summarise(           interval = min(time - dplyr::lag(time), na.rm=TRUE),
-              forecast_start_time = min(time) - interval,
+    group_by(across(any_of(c("target_id", "model_id", "pub_time", 
+                             "variable", "site_id", "x", "y", "z")))) %>% 
+    summarise(interval = min(time - dplyr::lag(time), na.rm=TRUE),
+              start_time = min(time) - interval,
               .groups = "drop")
   
   ## add columns for start_time and horizon
   df <- df %>% 
-    left_join(interval, by = c("theme", "team", "issue_date", 
-                               "site", "x", "y", "z", "target")) %>% 
-    mutate(horizon = time - forecast_start_time)
+    left_join(interval, by = c("target_id", "model_id", "pub_time", 
+                               "site_id", "x", "y", "z", "variable")) %>% 
+    mutate(horizon = time - start_time)
   
   if(!allow_difftime){
     df <- df %>% mutate(horizon = as.numeric(lubridate::as.duration(horizon), units="seconds"),

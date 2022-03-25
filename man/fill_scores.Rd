@@ -4,13 +4,13 @@
 \alias{fill_scores}
 \title{fill scores based on a null}
 \usage{
-fill_scores(df, null_team = "EFInull")
+fill_scores(df, null_model = "EFInull")
 }
 \arguments{
 \item{df}{a data frame of forecasts, with column
 "team" identifying different forecasts.}
 
-\item{null_team}{the "team" name identifying the baseline (null) forecast
+\item{null_model}{the "team" name identifying the baseline (null) forecast
 used for filling missing values.}
 }
 \description{
@@ -22,7 +22,7 @@ merely removing missing values when averaging across scores is not
 sufficient.  A simple expedient is to replace missing values with
 predictions made from a baseline 'null' forecast.  This function
 simply provides this behavior.  Original forecast scores with missing values
-are retained as \code{crps_team} and \code{logs_team} columns, while
+are retained as \code{crps_model} and \code{logs_model} columns, while
 \code{crps} and \code{logs} become filled with baseline scores from the null forecast.
 }
 \details{
