@@ -56,7 +56,7 @@ score_theme <- function(theme,
 
 ## Optional once forecasts and targets files use long variable format
 TARGET_VARS <- c("oxygen", 
-                 "temperature", "richness", "abundance", "nee", "le", "vswc", 
+                 "temperature", "chla", "richness", "abundance", "nee", "le", "vswc", 
                  "gcc_90", "rcc_90", "ixodes_scapularis", "amblyomma_americanum",
                  "Amblyomma americanum")
 
