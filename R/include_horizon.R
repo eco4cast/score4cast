@@ -11,7 +11,7 @@ include_horizon <- function(df,
     group_by(across(any_of(c("target_id", "model_id", "pub_time", 
                              "variable", "site_id", "x", "y", "z")))) %>% 
     summarise(interval = min(time - dplyr::lag(time), na.rm=TRUE),
-              start_time = min(time) - interval,
+              start_time = min(time), #- interval,
               .groups = "drop")
   
   ## add columns for start_time and horizon
