@@ -25,7 +25,7 @@ standardize_format <- function(df, target_vars) {
   column_names <- c("target_id", "model_id", "start_time",
                     "pub_time", "site_id", "x", "y", "z", "time",
                     "variable", "ensemble", "statistic", 
-                    "predicted", "observed",
+                    "predicted", "observed", "mean", "sd",
                     target_vars)
   
   

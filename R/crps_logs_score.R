@@ -29,8 +29,12 @@ crps_logs_score <- function(forecast, target){
                 quantile90 = stats::quantile(predicted, 0.90, na.rm = TRUE),
                 quantile97.5 = stats::quantile(predicted, 0.975, na.rm = TRUE),
                 .groups = "drop")
-    
+  
+      
   } else {
+    
+    ## FIXME assumes columns 'mean' and 'sd' instead of 'statistic', 
+    
     out <- joined  %>% 
       dplyr::mutate(crps = crps_norm(observed, mean, sd),
                     logs = logs_norm(observed, mean, sd),
