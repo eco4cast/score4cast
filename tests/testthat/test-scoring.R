@@ -52,3 +52,30 @@ test_that("mean scores", {
   expect_gt(nrow(leaderboard),0)
 })
 
+test_that("unit tests", {
+  forecast <- read4cast::read_forecast(
+    paste0("https://data.ecoforecast.org/forecasts/",
+           "aquatics/aquatics-2022-04-07-climatology.csv.gz"))
+  target <- read4cast::read_forecast(
+    paste0("https://data.ecoforecast.org/targets/",
+           "aquatics/aquatics-targets.csv.gz")) |> 
+      mutate(target_id = "theme") |>
+      pivot_target(target_vars = score4cast:::TARGET_VARS)
+  
+  score(forecast, target)
+  crps_logs_score(forecast,target) |> include_horizon()
+  
+  theme = "aquatics"
+  target_vars = TARGET_VARS
+  target <- target %>% 
+    dplyr::mutate(target_id = theme) %>%
+    pivot_target(target_vars)
+  
+  forecast <- forecast %>% 
+    dplyr::mutate(target_id = theme) %>%
+    pivot_forecast(target_vars)
+  
+  crps_logs_score(forecast, target) %>%
+    include_horizon()
+  
+})

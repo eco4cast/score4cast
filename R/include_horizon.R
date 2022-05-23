@@ -9,15 +9,16 @@ include_horizon <- function(df,
   
   interval <- df %>%
     group_by(across(any_of(c("target_id", "model_id", "pub_time", 
-                             "variable", "site_id", "x", "y", "z")))) %>% 
+                             "variable", "site_id")))) %>% 
     summarise(interval = min(time - dplyr::lag(time), na.rm=TRUE),
               start_time = min(time), #- interval,
               .groups = "drop")
   
   ## add columns for start_time and horizon
   df <- df %>% 
-    left_join(interval, by = c("target_id", "model_id", "pub_time", 
-                               "site_id", "x", "y", "z", "variable")) %>% 
+    left_join(interval,
+              #by = c("target_id", "model_id", "pub_time", "site_id", "variable")
+              ) %>% 
     mutate(horizon = time - start_time)
   
   if(!allow_difftime){

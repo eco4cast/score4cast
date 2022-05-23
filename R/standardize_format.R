@@ -8,10 +8,6 @@ standardize_format <- function(df, target_vars) {
                                 "target" = "variable",
                                 "siteID" = "site_id",
                                 "site"   = "site_id",
-                                "latitude" = "y",
-                                "lognitude" = "x",
-                                "depth" = "z",
-                                "height" = "z",
                                 "theme"  = "target_id",
                                 "team"   = "model_id",
                                 "forecast_start_time" = "start_time",
@@ -23,7 +19,7 @@ standardize_format <- function(df, target_vars) {
   df <- dplyr::rename_with(df,renamer)
   
   column_names <- c("target_id", "model_id", "start_time",
-                    "pub_time", "site_id", "x", "y", "z", "time",
+                    "pub_time", "site_id", "time",
                     "variable", "ensemble", "statistic", 
                     "predicted", "observed", "mean", "sd",
                     target_vars)

@@ -14,8 +14,8 @@ crps_logs_score <- function(forecast, target){
   # left join will keep predictions even where we have no observations
   joined <- dplyr::left_join(forecast, 
                              target, 
-                             by = c("target_id", "site_id", "x", "y",
-                                    "z", "time", "variable"))
+                             #by = c("target_id", "site_id", "time", "variable")
+                             )
   
   if("ensemble" %in% colnames(joined)){
     out <- joined %>% 
@@ -48,7 +48,7 @@ crps_logs_score <- function(forecast, target){
   ## Ensure both ensemble and stat-based have identical column order:
   out %>% select(any_of(c("target_id", "model_id",
                           "pub_time", "site_id",
-                          "x", "y", "z", "time",
+                          "time",
                           "variable", "mean", "sd", "observed", "crps",
                           "logs", "quantile02.5", "quantile10",
                           "quantile90","quantile97.5","interval", 
