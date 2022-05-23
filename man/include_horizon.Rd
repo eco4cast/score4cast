@@ -16,5 +16,7 @@ include_horizon(
 (default) or as native difftime (compatible in R but not in serializations like csv or parquet)}
 }
 \description{
-include_horizon
+Adds horizon if not present, defined as \code{time - start_time} with a group
+defined by any of: "target_id", "model_id", "pub_time", "variable", "site_id".
+Will also add \code{start_time} if not present, defined as \code{time - min(time)}
 }

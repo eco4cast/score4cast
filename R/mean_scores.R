@@ -53,8 +53,7 @@ fill_scores <- function(df, null_model = "EFInull") {
     select(-crps_null, -logs_null)
   
   ## express difftimes in days, not seconds
-  null_filled %>% mutate(interval = as.numeric(interval, units="days"),
-                         horizon = as.numeric(horizon, units="days"))
+  null_filled %>% mutate(horizon = as.numeric(horizon, units="days"))
   
 }
 

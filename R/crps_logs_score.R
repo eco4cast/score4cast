@@ -51,7 +51,7 @@ crps_logs_score <- function(forecast, target){
                           "time",
                           "variable", "mean", "sd", "observed", "crps",
                           "logs", "quantile02.5", "quantile10",
-                          "quantile90","quantile97.5","interval", 
+                          "quantile90","quantile97.5", 
                           "start_time")))
 }
 
