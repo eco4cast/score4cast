@@ -44,13 +44,10 @@ score_theme <- function(theme,
     total = length(forecast_urls), 
     clear = FALSE, width= 80)
 
-    errors <- forecast_urls %>% 
+  errors <- forecast_urls %>% 
       purrr::map(function(x) {
         pb$tick()
-        #suppressMessages({
         score_safely(x, target, s3_prov, s3_scores)
-        gc()
-        #})
       })
   
     
@@ -78,7 +75,7 @@ get_target <- function(theme, endpoint) {
   #target <- arrow::open_dataset(path, format="csv", 
   #                              skip_rows = 1, schema = target_schema) 
   
-  path <- glue::glue("https://{endpoint}/targets/{theme}/{theme}-targets.csv.gz",
+  path <- glue::glue("https://{endpoint}/neon4cast-targets/{theme}/{theme}-targets.csv.gz",
                      theme=theme, endpoint = endpoint)
   target <- 
     readr::read_csv(path, show_col_types = FALSE) %>% 
@@ -92,7 +89,7 @@ get_forecasts <- function(s3_forecasts, theme, endpoint) {
   forecasts <- c(stringr::str_subset(s3_forecasts$ls(theme), "[.]csv(.gz)?"),
                  stringr::str_subset(s3_forecasts$ls(theme), "[.]nc"))
   ## Weird to require endpoint and construct raw URLs
-  forecast_urls <- paste0("https://", endpoint, "/forecasts/", forecasts )
+  forecast_urls <- paste0("https://", endpoint, "/neon4cast-forecasts/", forecasts )
   forecast_urls
 }
 
@@ -115,9 +112,12 @@ score_if <- function(forecast_file,
                                              s3_scores,
                                              "parquet")
 ) {
-  forecast_df <- 
-    read4cast::read_forecast(forecast_file) %>% 
-    mutate(filename = basename(forecast_file))
+  
+  suppressMessages({ ## no message about 'new columns'
+    forecast_df <- 
+      read4cast::read_forecast(forecast_file) %>% 
+      mutate(filename = basename(forecast_file))
+  })
   target_df <- subset_target(forecast_df, target)
   id <- rlang::hash(list(forecast_df, target_df))
   # score only unique combinations of subset of targets + forecast
