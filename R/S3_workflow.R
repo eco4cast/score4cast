@@ -15,39 +15,42 @@
 #' This connection requires write access, e.g. by specifying 
 #  AWS_ACCESS_KEY_ID & AWS_SECRET_ACCESS_KEY env vars.
 #' @param s3_prov a connection from [arrow::s3_bucket]
-#' @param endpoint domain name for forecast/target download URL
+#' @param after a date by which to filter out older forecasts from (re)-scoring
 #' @export
 score_theme <- function(theme, 
                         s3_forecasts, 
                         s3_targets, 
                         s3_scores, 
                         s3_prov, 
-                        endpoint,
                         after = as.Date("2022-01-01")){
   
 
   
   options("readr.show_progress"=FALSE)
-  target <- get_target(theme, endpoint)
-  forecast_urls <- get_forecasts(s3_forecasts, theme, endpoint)
+  target <- get_target(theme, s3_targets)
+  forecasts <- s3_forecasts$ls(theme)
   
   if(!is.null(after)){
-    fcs <- basename(forecast_urls)
+    fcs <- basename(forecasts)
     dates <- stringr::str_extract(fcs, "\\d{4}-\\d{2}-\\d{2}")
     dates <- as.Date(dates)
-    forecast_urls <- forecast_urls[dates >= after]
+    forecasts <- forecasts[dates >= after]
   }
   
   pb <- progress::progress_bar$new(
     format = glue::glue("  scoring {theme} [:bar] :percent in :elapsed,",
                         " eta: :eta"),
-    total = length(forecast_urls), 
+    total = length(forecasts), 
     clear = FALSE, width= 80)
 
-  errors <- forecast_urls %>% 
+  errors <- forecasts %>% 
       purrr::map(function(x) {
         pb$tick()
-        score_safely(x, target, s3_prov, s3_scores)
+        score_safely(x, 
+                     target = target, 
+                     s3_prov = s3_prov, 
+                     s3_scores = s3_scores, 
+                     s3_forecasts = s3_forecasts)
       })
   
     
@@ -68,30 +71,13 @@ TARGET_VARS <- c("oxygen",
                  "Amblyomma americanum")
 
 
-get_target <- function(theme, endpoint) {
-  
-  ## alternately: could use already-pivoted monthly files
-  #path <- s3_targets$path(glue::glue("{theme}/monthly", theme=theme))
-  #target <- arrow::open_dataset(path, format="csv", 
-  #                              skip_rows = 1, schema = target_schema) 
-  
-  path <- glue::glue("https://{endpoint}/neon4cast-targets/{theme}/{theme}-targets.csv.gz",
-                     theme=theme, endpoint = endpoint)
-  target <- 
-    readr::read_csv(path, show_col_types = FALSE) %>% 
+get_target <- function(theme, s3) {
+  key <- glue::glue("{theme}/{theme}-targets.csv.gz")
+  read4cast::read_forecast(key, s3 = s3_targets) %>%
     mutate(target_id = theme) %>%
-    pivot_target(TARGET_VARS) 
-  target
+    pivot_target(TARGET_VARS)
 }
 
-get_forecasts <- function(s3_forecasts, theme, endpoint) {
-  ## extract URLs for forecasts & targets
-  forecasts <- c(stringr::str_subset(s3_forecasts$ls(theme), "[.]csv(.gz)?"),
-                 stringr::str_subset(s3_forecasts$ls(theme), "[.]nc"))
-  ## Weird to require endpoint and construct raw URLs
-  forecast_urls <- paste0("https://", endpoint, "/neon4cast-forecasts/", forecasts )
-  forecast_urls
-}
 
 # A relatively generic scoring function which
 # takes a pivoted targets but un-pivoted forecast
@@ -111,6 +97,7 @@ score_if <- function(forecast_file,
                      target, 
                      s3_prov,
                      s3_scores,
+                     s3_forecasts,
                      score_file = score_dest(forecast_file, 
                                              s3_scores,
                                              "parquet")
@@ -118,7 +105,7 @@ score_if <- function(forecast_file,
   
   suppressMessages({ ## no message about 'new columns'
     forecast_df <- 
-      read4cast::read_forecast(forecast_file) %>% 
+      read4cast::read_forecast(forecast_file, s3 = s3_forecasts) %>% 
       mutate(filename = basename(forecast_file))
   })
   target_df <- subset_target(forecast_df, target)
@@ -180,23 +167,3 @@ score_dest <- function(forecast_file, s3_scores, type="parquet"){
 
 
 
-
-
-## Toggle function, can either use monthly target file or will 
-## download and pivot the big target file
-get_target_s3 <- function(theme, s3_targets, use = "combined") {
-  
-  if(use == "monthly"){
-    path <- s3_targets$path(glue::glue("{theme}/monthly", theme=theme))
-    target <- arrow::open_dataset(path, format="csv") # probably needs schema if we use this 
-  } else {
-    
-    path <- s3_targets$path(glue::glue("{theme}/{theme}-targets.csv.gz", theme=theme))
-    target <- arrow::open_dataset(path, format="csv") %>% 
-      dplyr::collect() %>%
-      mutate(target_id = theme) %>%
-      pivot_target(TARGET_VARS)
-  }
-  
-  target
-}
