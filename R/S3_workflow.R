@@ -97,10 +97,13 @@ get_forecasts <- function(s3_forecasts, theme, endpoint) {
 # takes a pivoted targets but un-pivoted forecast
 # if pivot_* fns were smart they could conditionally pivot
 score_it <- function(forecast_df, target_df) {
+  
+  suppressMessages({ # don't show "joining by" msg
   forecast_df %>%
     pivot_forecast(TARGET_VARS) %>%
     crps_logs_score(target_df) %>%
     include_horizon()
+  })
 }
 
 # Read a forecast file + target file and score them conditionally on prov
