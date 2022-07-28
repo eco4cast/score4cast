@@ -61,7 +61,7 @@ score_theme <- function(theme,
   options("readr.show_progress"=NULL)
   unscored <- purrr::map_lgl(purrr::map(errors, "result"),is.null)
   error <- purrr::map(errors[unscored], "error")
-  invisible(list(urls = forecast_urls[unscored], error = error))
+  invisible(list(urls = forecasts[unscored], error = error))
 }
 
 ## Optional once forecasts and targets files use long variable format
