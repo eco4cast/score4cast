@@ -28,7 +28,12 @@ score_theme <- function(theme,
   
   options("readr.show_progress"=FALSE)
   target <- get_target(theme, s3_targets)
+  
+  ## get all forecasts
   forecasts <- s3_forecasts$ls(theme)
+  not_meta <- stringr::str_detect(forecasts,"[.]xml", negate=TRUE)
+  not_prov <- stringr::str_detect(forecasts,"prov\\.", negate=TRUE)
+  forecasts <- forecasts[not_meta & not_prov]
   
   if(!is.null(after)){
     fcs <- basename(forecasts)
