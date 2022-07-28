@@ -78,7 +78,7 @@ TARGET_VARS <- c("oxygen",
 
 get_target <- function(theme, s3) {
   key <- glue::glue("{theme}/{theme}-targets.csv.gz")
-  read4cast::read_forecast(key, s3 = s3_targets) %>%
+  read4cast::read_forecast(key, s3 = s3) %>%
     mutate(target_id = theme) %>%
     pivot_target(TARGET_VARS)
 }
