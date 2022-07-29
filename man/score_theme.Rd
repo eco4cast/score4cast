@@ -10,7 +10,8 @@ score_theme(
   s3_targets,
   s3_scores,
   s3_prov,
-  after = as.Date("2022-01-01")
+  after = as.Date("2022-01-01"),
+  local_prov = "scoring_provenance.csv"
 )
 }
 \arguments{
@@ -26,6 +27,9 @@ This connection requires write access, e.g. by specifying}
 \item{s3_prov}{a connection from \link[arrow:s3_bucket]{arrow::s3_bucket}}
 
 \item{after}{a date by which to filter out older forecasts from (re)-scoring}
+
+\item{local_prov}{path to local csv file which will be used to
+store provenance until theme is finished scoring.}
 }
 \description{
 A helper utility to score a collection of forecasts efficiently
