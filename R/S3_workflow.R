@@ -16,15 +16,19 @@
 #  AWS_ACCESS_KEY_ID & AWS_SECRET_ACCESS_KEY env vars.
 #' @param s3_prov a connection from [arrow::s3_bucket]
 #' @param after a date by which to filter out older forecasts from (re)-scoring
+#' @param local_prov path to local csv file which will be used to 
+#' store provenance until theme is finished scoring.
 #' @export
 score_theme <- function(theme, 
                         s3_forecasts, 
                         s3_targets, 
                         s3_scores, 
                         s3_prov, 
-                        after = as.Date("2022-01-01")){
+                        after = as.Date("2022-01-01"),
+                        local_prov = "scoring_provenance.csv"){
   
-
+  prov_download(s3_prov, local_prov)
+  prov_df <- readr::read_csv(local_prov, show_col_types = FALSE)
   
   options("readr.show_progress"=FALSE)
   target <- get_target(theme, s3_targets)
@@ -53,11 +57,13 @@ score_theme <- function(theme,
         pb$tick()
         score_safely(x, 
                      target = target, 
-                     s3_prov = s3_prov, 
+                     local_prov = local_prov,
+                     prov_df = prov_df,
                      s3_scores = s3_scores, 
                      s3_forecasts = s3_forecasts)
       })
-  
+  ## Sync prov
+  prov_upload(s3_prov = s3_prov, local_prov = local_prov)
     
   ## warn about errors (e.g. curl upload failures)
   warnings <- unique(purrr::compact(purrr::map(errors, ~ .x$error$message)))
@@ -100,7 +106,8 @@ score_it <- function(forecast_df, target_df) {
 # Read a forecast file + target file and score them conditionally on prov
 score_if <- function(forecast_file, 
                      target, 
-                     s3_prov,
+                     local_prov,
+                     prov_df,
                      s3_scores,
                      s3_forecasts,
                      score_file = score_dest(forecast_file, 
@@ -116,11 +123,11 @@ score_if <- function(forecast_file,
   target_df <- subset_target(forecast_df, target)
   id <- rlang::hash(list(forecast_df, target_df))
   # score only unique combinations of subset of targets + forecast
-  if (!prov_has(id, s3_prov)) {
+  if (!prov_has(id, prov_df)) {
     score_it(forecast_df, target_df) %>%
       arrow::write_parquet(score_file)
   }
-  prov_add(id, s3_prov)
+  prov_add(id, local_prov)
   invisible(id)
 }
 
@@ -145,17 +152,32 @@ subset_target <- function(forecast_df, target) {
     dplyr::collect()
 }
 
-## Lots of alternative ways to write these; could use local file but would have to sync
-## Note that S3 cannot 'append' to a stream
-## A poor man's index: says only if id has been seen before
-prov_has <- function(id, s3_prov) {
-  prov <-  s3_prov$ls()
-  any(grepl(id, prov))
+
+
+prov_download <- function(s3_prov, local_prov = "scoring_provenance.csv") {
+  path <- s3_prov$path("scoring_provenance.csv")
+  prov <- arrow::open_dataset(path, format="csv")
+  arrow::write_csv_arrow(prov, local_prov)
 }
-prov_add <- function(id, s3_prov) {
-  x <- s3_prov$OpenOutputStream(id)
-  x$write(raw()) # no actual information
-  x$close()
+
+prov_upload <- function(s3_prov, local_prov = "scoring_provenance.csv") {
+  prov <- arrow::open_dataset(local_prov, format="csv")
+  path <- s3_prov$path("scoring_provenance.csv")
+  prov <- arrow::write_csv_arrow(prov, path)
+}
+
+
+## ARGH "Not possible to append efficiently to S3 objects"
+## ARGH using S3 names as index is very slow!!
+## Write local file and sync it is best :-(
+## A poor man's index: says only if id has been seen before
+prov_has <- function(id, prov) {
+  ## would be fast even with remote file
+  prov |> dplyr::filter(prov == id) |> nrow() >= 1
+}
+prov_add <- function(id, local_prov = "scoring_provenance.csv") {
+  new_prov <-  dplyr::tibble(prov=id)
+  readr::write_csv(new_prov, local_prov, append=TRUE)
 }
 ## Note, we can still access timestamp on prov, and purge older than etc
 
