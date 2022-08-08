@@ -35,6 +35,7 @@ Suggests:
     stringr,
     testthat (>= 3.0.0),
     tidyselect,
-    vctrs
+    vctrs,
+    curl
 Remotes: 
     github::eco4cast/read4cast

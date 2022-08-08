@@ -1,5 +1,4 @@
 
-
 ## Requires that forecasts and targets have already been cleaned & pivoted!
 
 #' crps_logs_score
@@ -9,50 +8,69 @@
 #' @param forecast a forecast data.frame in long EFI-standard format
 #' @param target a target data.frame in long EFI-standard format
 #' @export
-crps_logs_score <- function(forecast, target){
+crps_logs_score <- function(forecast, target) {
+scores <- 
+  dplyr::inner_join(forecast, target) |>
+  dplyr::group_by(model_id, pub_time, site_id, time, family, variable) |> 
+  dplyr::summarise(
+    crps = generic_crps(family, parameter, predicted, observed),
+    logs = generic_logs(family, parameter, predicted, observed),
+    mean = generic_mean(family, parameter, predicted),
+    sd = generic_sd(family, parameter, predicted),
+    quantile02.5 = generic_quantile(0.025, family, parameter, predicted, observed),
+    quantile10 = generic_quantile(0.10, family, parameter, predicted, observed),
+    quantile90 = generic_quantile(0.90, family, parameter, predicted, observed),
+    quantile97.5 = generic_quantile(0.975, family, parameter, predicted, observed),
+    .groups = "drop"
+    )
+}
+
+generic_mean <- function(family, parameter, predicted) {
+  names(predicted) = parameter
+  switch(unique(family),
+         norm = predicted["mean"],
+         sample = mean(predicted)
+  )
+}
+
+generic_sd <- function(family, parameter, predicted) {
+  names(predicted) = parameter
+  switch(unique(family),
+         norm = predicted["sd"],
+         sample = sd(predicted)
+  )
+}
+
+generic_crps <- function(family, parameter, predicted, observed){
+  # scoringRules already has a generic crps() method that covers 
+  # all cases except crps_sample.  (which seems to be an oversight)
   
-  # left join will keep predictions even where we have no observations
-  joined <- dplyr::left_join(forecast, 
-                             target, 
-                             #by = c("target_id", "site_id", "time", "variable")
-                             )
+  names(predicted) = parameter
+  args <- c(list(y = observed[[1]], family = family), as.list(predicted))
+  switch(unique(family),
+         sample = crps_sample(observed[[1]], predicted),
+         do.call(crps, args)
+  )
+}
+
+generic_logs <- function(family, parameter, predicted, observed){
+  # scoringRules already has a generic crps() method that covers 
+  # all cases except crps_sample.  (which seems to be an oversight)
   
-  if("ensemble" %in% colnames(joined)){
-    out <- joined %>% 
-      group_by(across(-any_of(c("ensemble", "predicted")))) %>% 
-      summarise(mean = mean(predicted, na.rm =TRUE),
-                sd = stats::sd(predicted, na.rm =TRUE),
-                crps = crps_sample(observed[[1]], na_rm(predicted)),
-                logs = logs_sample(observed[[1]], na_rm(predicted)),
-                quantile02.5 = stats::quantile(predicted, 0.025, na.rm = TRUE),
-                quantile10 = stats::quantile(predicted, 0.10, na.rm = TRUE),
-                quantile90 = stats::quantile(predicted, 0.90, na.rm = TRUE),
-                quantile97.5 = stats::quantile(predicted, 0.975, na.rm = TRUE),
-                .groups = "drop")
-  
-      
-  } else {
-    
-    ## FIXME assumes columns 'mean' and 'sd' instead of 'statistic', 
-    
-    out <- joined  %>% 
-      dplyr::mutate(crps = crps_norm(observed, mean, sd),
-                    logs = logs_norm(observed, mean, sd),
-                    quantile02.5 = stats::qnorm( 0.025, mean, sd),
-                    quantile10 = stats::qnorm(0.10, mean, sd),
-                    quantile90 = stats::qnorm(0.90, mean, sd),
-                    quantile97.5 = stats::qnorm(0.975, mean, sd))
-    
-  }
-  
-  ## Ensure both ensemble and stat-based have identical column order:
-  out %>% select(any_of(c("target_id", "model_id",
-                          "pub_time", "site_id",
-                          "time",
-                          "variable", "mean", "sd", "observed", "crps",
-                          "logs", "quantile02.5", "quantile10",
-                          "quantile90","quantile97.5", 
-                          "start_time")))
+  names(predicted) = parameter
+  args <- c(list(y = observed[[1]], family = family), as.list(predicted))
+  switch(unique(family),
+         sample = logs_sample(observed[[1]], predicted),
+         do.call(logs, args)
+  )
+}
+
+generic_quantile <- function(p, family, parameter, predicted, observed){
+  names(predicted) = parameter
+  switch(unique(family),
+         norm =  stats::qnorm(p, mean =  predicted["mean"], sd = predicted["sd"]),
+         sample = stats::quantile(predicted, p, na.rm = TRUE)
+  )
 }
 
 
@@ -63,14 +81,19 @@ crps_sample <- function(y, dat) {
            error = function(e) NA_real_, finally = NA_real_)
 }
 
-crps_norm <- function(y, mean, sd) {
-  tryCatch(scoringRules::crps_norm(y, mean = mean, sd = sd),
+crps <- function(y, ...) {
+  tryCatch(scoringRules::crps(y, ...),
            error = function(e) NA_real_, finally = NA_real_)
 }
 
 ## Teach crps to treat any NA observations as NA scores:
 logs_sample <- function(y, dat) {
   tryCatch(scoringRules::logs_sample(y, dat),
+           error = function(e) NA_real_, finally = NA_real_)
+}
+
+logs <- function(y, ...) {
+  tryCatch(scoringRules::logs(y, ...),
            error = function(e) NA_real_, finally = NA_real_)
 }
 
