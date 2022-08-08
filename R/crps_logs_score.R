@@ -9,10 +9,18 @@
 #' @param target a target data.frame in long EFI-standard format
 #' @export
 crps_logs_score <- function(forecast, target) {
-scores <- 
-  dplyr::inner_join(forecast, target) |>
-  dplyr::group_by(model_id, pub_time, site_id, time, family, variable) |> 
+
+  suppressMessages({ # don't  tell me what we are joining by.
+  joined <- 
+    dplyr::inner_join(forecast, target) |> 
+    map_old_format() # helper routine for backwards compatibility, eventually should be deprecated!
+  })
+  
+  # groups are required, no group_by(any_of())
+  scores <- joined |> 
+  dplyr::group_by(model_id, start_time, site_id, time, family, variable) |> 
   dplyr::summarise(
+    observed = observed,
     crps = generic_crps(family, parameter, predicted, observed),
     logs = generic_logs(family, parameter, predicted, observed),
     mean = generic_mean(family, parameter, predicted),
@@ -22,8 +30,13 @@ scores <-
     quantile90 = generic_quantile(0.90, family, parameter, predicted, observed),
     quantile97.5 = generic_quantile(0.975, family, parameter, predicted, observed),
     .groups = "drop"
-    )
+  )
+  
+  scores
 }
+
+# Should we infer start_time if missing?  
+
 
 generic_mean <- function(family, parameter, predicted) {
   names(predicted) = parameter
@@ -105,6 +118,7 @@ logs_norm <- function(y, mean, sd) {
 
 
 globalVariables(c("crps" ,"filename",
+                  "family", "site_id", "parameter", "ensemble",
                   "horizon", "model_id", "target_id",
                   "logs","observed", "pub_time", "start_time",
                   "predicted", "variable", "interval",

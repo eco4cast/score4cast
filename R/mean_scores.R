@@ -38,11 +38,11 @@ fill_scores <- function(df, null_model = "EFInull") {
   
   null <- df %>%
     filter(model_id == null_model) %>%
-    select("target_id", "variable", "site_id", "time",
+    select("variable", "site_id", "time",
            "start_time", "crps", "logs")
   all <- tidyr::expand_grid(null, team)
   na_filled <- left_join(all, df,
-                         by = c("target_id", "model_id", "variable",
+                         by = c("model_id", "variable",
                                 "site_id", "time", "start_time"),
                          suffix = c("_null", "_model"))
   null_filled <- na_filled %>% mutate(

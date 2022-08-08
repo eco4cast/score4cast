@@ -18,11 +18,20 @@ standardize_format <- function(df, target_vars) {
   }
   df <- dplyr::rename_with(df,renamer)
   
-  column_names <- c("target_id", "model_id", "start_time",
+  deprecrated_names <- c(target_vars,
+                         "target_id", 
+                         "ensemble", 
+                         "statistic", 
+                         "mean",
+                         "sd")
+  
+  column_names <- c(deprecrated_names,
+                    "family", "parameter",
+                    "model_id", "start_time",
                     "pub_time", "site_id", "time",
-                    "variable", "ensemble", "statistic", 
-                    "predicted", "observed", "mean", "sd",
-                    target_vars)
+                    "variable", 
+                    "predicted", "observed"
+                    )
   
   
   #GENERALIZATION:  This is a theme specific hack. How do we generalize?
@@ -99,3 +108,4 @@ isoweek <- function(time) { # Note: ISOweek calls not duckdb-compatible
   ISOweek::ISOweek2date(paste0(ISOweek::ISOweek(time), "-","1"))
 }
 na_rm <- function(x) as.numeric(stats::na.exclude(x))
+
