@@ -25,10 +25,10 @@ crps_logs_score <- function(forecast, target) {
     logs = generic_logs(family, parameter, predicted, observed),
     mean = generic_mean(family, parameter, predicted),
     sd = generic_sd(family, parameter, predicted),
-    quantile02.5 = generic_quantile(0.025, family, parameter, predicted, observed),
-    quantile10 = generic_quantile(0.10, family, parameter, predicted, observed),
-    quantile90 = generic_quantile(0.90, family, parameter, predicted, observed),
-    quantile97.5 = generic_quantile(0.975, family, parameter, predicted, observed),
+    quantile02.5 = generic_quantile(0.025, family, parameter, predicted),
+    quantile10 = generic_quantile(0.10, family, parameter, predicted),
+    quantile90 = generic_quantile(0.90, family, parameter, predicted),
+    quantile97.5 = generic_quantile(0.975, family, parameter, predicted),
     .groups = "drop"
   )
   
@@ -59,9 +59,9 @@ generic_crps <- function(family, parameter, predicted, observed){
   # all cases except crps_sample.  (which seems to be an oversight)
   
   names(predicted) = parameter
-  args <- c(list(y = observed[[1]], family = family), as.list(predicted))
+  args <- c(list(y = dplyr::first(observed), family = family), as.list(predicted))
   switch(unique(family),
-         sample = crps_sample(observed[[1]], predicted),
+         sample = crps_sample(dplyr::first(observed), predicted),
          do.call(crps, args)
   )
 }
@@ -71,14 +71,14 @@ generic_logs <- function(family, parameter, predicted, observed){
   # all cases except crps_sample.  (which seems to be an oversight)
   
   names(predicted) = parameter
-  args <- c(list(y = observed[[1]], family = family), as.list(predicted))
+  args <- c(list(y = dplyr::first(observed), family = family), as.list(predicted))
   switch(unique(family),
-         sample = logs_sample(observed[[1]], predicted),
+         sample = logs_sample(dplyr::first(observed), predicted),
          do.call(logs, args)
   )
 }
 
-generic_quantile <- function(p, family, parameter, predicted, observed){
+generic_quantile <- function(p, family, parameter, predicted){
   names(predicted) = parameter
   switch(unique(family),
          norm =  stats::qnorm(p, mean =  predicted["mean"], sd = predicted["sd"]),
