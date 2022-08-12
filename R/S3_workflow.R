@@ -156,7 +156,7 @@ subset_target <- function(forecast_df, target) {
 
 prov_download <- function(s3_prov, local_prov = "scoring_provenance.csv") {
   path <- s3_prov$path("scoring_provenance.csv")
-  prov <- arrow::open_dataset(path, format="csv")
+  prov <- arrow::read_csv_arrow(path)
   arrow::write_csv_arrow(prov, local_prov)
 }
 
