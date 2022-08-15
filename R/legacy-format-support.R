@@ -20,7 +20,7 @@ map_old_format <- function(df) {
   
   if (!("start_time" %in% colnames(df))) {
     df <- df |> 
-      dplyr::mutate(start_time = pub_time)
+      dplyr::mutate(start_time = lubridate::as_datetime(pub_time))
   }
   
   
