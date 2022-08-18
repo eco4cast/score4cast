@@ -9,7 +9,10 @@ map_old_format <- function(df) {
       tidyr::pivot_longer(dplyr::any_of(c("mean", "sd")),
                           names_to = "parameter", 
                           values_to = "predicted") |>
-      dplyr::mutate(family="normal")
+      dplyr::mutate(family="normal",
+                    parameter=forcats::fct_recode(parameter,
+                                                  mu="mean", 
+                                                  sigma="sd"))
     
   } else if ("statistic" %in% colnames(df)) {
     df <- df |> 
@@ -17,6 +20,11 @@ map_old_format <- function(df) {
       dplyr::mutate(family="normal")
   }
   
+  if( length(dplyr::filter(df, parameter == "mean")) > 0) {
+    df <- df |>  dplyr::mutate(parameter=forcats::fct_recode(parameter,
+                                                             mu="mean",
+                                                             sigma="sd"))
+  }
   
   if ("pub_time" %in% colnames(df) &  !("start_time" %in% colnames(df))) {
     df <- df |> 
