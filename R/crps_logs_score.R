@@ -35,13 +35,17 @@ crps_logs_score <- function(forecast, target) {
   scores
 }
 
-# Should we infer start_time if missing?  
 
+## Naming conventions are based on `distributional` package:
+## https://pkg.mitchelloharawild.com/distributional/reference/index.html
+
+## More generically, map family, parameter -> list-column of type .distribution,
+## then we could use distributional functions
 
 generic_mean <- function(family, parameter, predicted) {
   names(predicted) = parameter
   switch(unique(family),
-         norm = predicted["mean"],
+         normal = predicted["mu"],
          sample = mean(predicted)
   )
 }
@@ -49,20 +53,24 @@ generic_mean <- function(family, parameter, predicted) {
 generic_sd <- function(family, parameter, predicted) {
   names(predicted) = parameter
   switch(unique(family),
-         norm = predicted["sd"],
+         normal = predicted["sigma"],
          sample = sd(predicted)
   )
 }
 
-generic_crps <- function(family, parameter, predicted, observed){
-  # scoringRules already has a generic crps() method that covers 
-  # all cases except crps_sample.  (which seems to be an oversight)
-  
+generic_quantile <- function(p, family, parameter, predicted){
   names(predicted) = parameter
-  args <- c(list(y = dplyr::first(observed), family = family), as.list(predicted))
   switch(unique(family),
-         sample = crps_sample(dplyr::first(observed), predicted),
-         do.call(crps, args)
+         normal =  stats::qnorm(p, mean =  predicted["mu"], sd = predicted["sigma"]),
+         sample = stats::quantile(predicted, p, na.rm = TRUE)
+  )
+}
+
+generic_crps <- function(family, parameter, predicted, observed){
+  names(predicted) = parameter
+  switch(unique(family),
+         normal = crps_norm(dplyr::first(observed), predicted['mu'], predicted['sigma']),
+         sample = crps_sample(dplyr::first(observed), predicted)
   )
 }
 
@@ -71,20 +79,16 @@ generic_logs <- function(family, parameter, predicted, observed){
   # all cases except crps_sample.  (which seems to be an oversight)
   
   names(predicted) = parameter
-  args <- c(list(y = dplyr::first(observed), family = family), as.list(predicted))
   switch(unique(family),
-         sample = logs_sample(dplyr::first(observed), predicted),
-         do.call(logs, args)
+         normal = logs_norm(dplyr::first(observed), predicted['mu'], predicted['sigma']),
+         sample = logs_sample(dplyr::first(observed), predicted)
   )
 }
 
-generic_quantile <- function(p, family, parameter, predicted){
-  names(predicted) = parameter
-  switch(unique(family),
-         norm =  stats::qnorm(p, mean =  predicted["mean"], sd = predicted["sd"]),
-         sample = stats::quantile(predicted, p, na.rm = TRUE)
-  )
-}
+# scoringRules already has a generic crps() method that covers all cases except crps_sample.
+# if we used those conventions, we could get all parameters for free as:
+# args <- c(list(y = dplyr::first(observed), family = family), as.list(predicted))
+# do.call(logs, args)
 
 
 
@@ -96,6 +100,10 @@ crps_sample <- function(y, dat) {
 
 crps <- function(y, ...) {
   tryCatch(scoringRules::crps(y, ...),
+           error = function(e) NA_real_, finally = NA_real_)
+}
+crps_norm <- function(y, mean, sd) {
+  tryCatch(scoringRules::crps_norm(y, mean = mean, sd = sd),
            error = function(e) NA_real_, finally = NA_real_)
 }
 

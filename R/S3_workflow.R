@@ -156,7 +156,7 @@ subset_target <- function(forecast_df, target) {
 
 prov_download <- function(s3_prov, local_prov = "scoring_provenance.csv") {
   if(!"scoring_provenance.csv" %in% s3_prov$ls() ) {
-    arrow::write_csv_arrow(tibble::tibble(prov=NA),"scoring_provenance.csv")
+    arrow::write_csv_arrow(dplyr::tibble(prov=NA),"scoring_provenance.csv")
     return(NULL)
   }
   path <- s3_prov$path("scoring_provenance.csv")

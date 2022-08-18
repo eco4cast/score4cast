@@ -9,12 +9,12 @@ map_old_format <- function(df) {
       tidyr::pivot_longer(dplyr::any_of(c("mean", "sd")),
                           names_to = "parameter", 
                           values_to = "predicted") |>
-      dplyr::mutate(family="norm")
+      dplyr::mutate(family="normal")
     
   } else if ("statistic" %in% colnames(df)) {
     df <- df |> 
       dplyr::rename(parameter = "statistic") |>
-      dplyr::mutate(family="norm")
+      dplyr::mutate(family="normal")
   }
   
   
@@ -22,7 +22,5 @@ map_old_format <- function(df) {
     df <- df |> 
       dplyr::mutate(start_time = lubridate::as_datetime(pub_time))
   }
-  
-  
   df
 }

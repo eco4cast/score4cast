@@ -13,26 +13,26 @@ ensemble_forecast <- tibble::tribble(
                 time = lubridate::as_datetime(time))
 
 
-# norm = normal = gaussian 
+# normal = normalal = gaussian 
 # larger example just as sanity check that we handle additional grouping variables (site_id, time) correctly:
 gaussian_forecast <- tibble::tribble(
   ~model_id, ~start_time,    ~site_id, ~time,                  ~family,    ~parameter, ~variable,     ~predicted,
-  "gauss_team", "2022-02-01", "BARC",   "2022-02-02 00:00:00",  "norm",  "mean",   "oxygen",        5.55,
-  "gauss_team", "2022-02-01", "BARC",   "2022-02-02 00:00:00",  "norm",  "sd",     "oxygen",        0.2,
-  "gauss_team", "2022-02-01", "BARC",   "2022-02-02 00:00:00",  "norm",  "mean",   "temperature",   24.5,
-  "gauss_team", "2022-02-01", "BARC",   "2022-02-02 00:00:00",  "norm",  "sd",     "temperature",   0.5,
-  "gauss_team", "2022-02-01", "BARC",   "2022-02-03 00:00:00",  "norm",  "mean",   "oxygen",        3,
-  "gauss_team", "2022-02-01", "BARC",   "2022-02-03 00:00:00",  "norm",  "sd",     "oxygen",        0.1,
-  "gauss_team", "2022-02-01", "BARC",   "2022-02-03 00:00:00",  "norm",  "mean",   "temperature",   20,
-  "gauss_team", "2022-02-01", "BARC",   "2022-02-03 00:00:00",  "norm",  "sd",     "temperature",   0.1,
-  "gauss_team", "2022-02-01", "ORNL",   "2022-02-02 00:00:00",  "norm",  "mean",   "oxygen",        1,
-  "gauss_team", "2022-02-01", "ORNL",   "2022-02-02 00:00:00",  "norm",  "sd",     "oxygen",        0.2,
-  "gauss_team", "2022-02-01", "ORNL",   "2022-02-02 00:00:00",  "norm",  "mean",   "temperature",   31,
-  "gauss_team", "2022-02-01", "ORNL",   "2022-02-02 00:00:00",  "norm",  "sd",     "temperature",   0.5,
-  "gauss_team", "2022-02-01", "ORNL",   "2022-02-03 00:00:00",  "norm",  "mean",   "oxygen",        2,
-  "gauss_team", "2022-02-01", "ORNL",   "2022-02-03 00:00:00",  "norm",  "sd",     "oxygen",        0.1,
-  "gauss_team", "2022-02-01", "ORNL",   "2022-02-03 00:00:00",  "norm",  "mean",   "temperature",   32,
-  "gauss_team", "2022-02-01", "ORNL",   "2022-02-03 00:00:00",  "norm",  "sd",     "temperature",   0.1,)  |>
+  "gauss_team", "2022-02-01", "BARC",   "2022-02-02 00:00:00",  "normal",  "mu",       "oxygen",        5.55,
+  "gauss_team", "2022-02-01", "BARC",   "2022-02-02 00:00:00",  "normal",  "sigma",    "oxygen",        0.2,
+  "gauss_team", "2022-02-01", "BARC",   "2022-02-02 00:00:00",  "normal",  "mu",       "temperature",   24.5,
+  "gauss_team", "2022-02-01", "BARC",   "2022-02-02 00:00:00",  "normal",  "sigma",    "temperature",   0.5,
+  "gauss_team", "2022-02-01", "BARC",   "2022-02-03 00:00:00",  "normal",  "mu",       "oxygen",        3,
+  "gauss_team", "2022-02-01", "BARC",   "2022-02-03 00:00:00",  "normal",  "sigma",    "oxygen",        0.1,
+  "gauss_team", "2022-02-01", "BARC",   "2022-02-03 00:00:00",  "normal",  "mu",       "temperature",   20,
+  "gauss_team", "2022-02-01", "BARC",   "2022-02-03 00:00:00",  "normal",  "sigma",    "temperature",   0.1,
+  "gauss_team", "2022-02-01", "ORNL",   "2022-02-02 00:00:00",  "normal",  "mu",       "oxygen",        1,
+  "gauss_team", "2022-02-01", "ORNL",   "2022-02-02 00:00:00",  "normal",  "sigma",    "oxygen",        0.2,
+  "gauss_team", "2022-02-01", "ORNL",   "2022-02-02 00:00:00",  "normal",  "mu",       "temperature",   31,
+  "gauss_team", "2022-02-01", "ORNL",   "2022-02-02 00:00:00",  "normal",  "sigma",    "temperature",   0.5,
+  "gauss_team", "2022-02-01", "ORNL",   "2022-02-03 00:00:00",  "normal",  "mu",       "oxygen",        2,
+  "gauss_team", "2022-02-01", "ORNL",   "2022-02-03 00:00:00",  "normal",  "sigma",    "oxygen",        0.1,
+  "gauss_team", "2022-02-01", "ORNL",   "2022-02-03 00:00:00",  "normal",  "mu",       "temperature",   32,
+  "gauss_team", "2022-02-01", "ORNL",   "2022-02-03 00:00:00",  "normal",  "sigma",    "temperature",   0.1,)  |>
   dplyr::mutate(start_time = lubridate::as_date(start_time),
                 time = lubridate::as_datetime(time))
 
