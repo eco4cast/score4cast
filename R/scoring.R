@@ -29,6 +29,9 @@ score <- function(forecast,
   if(!inherits(target, "data.frame")) {
     target <- readr::read_csv(target)
   }
+  
+  ## pivoting supports legacy formats. 
+  
   target <- target %>% 
     dplyr::mutate(target_id = theme) %>%
     pivot_target(target_vars)
