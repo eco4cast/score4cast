@@ -40,49 +40,69 @@ crps_logs_score <- function(forecast, target) {
 ## https://pkg.mitchelloharawild.com/distributional/reference/index.html
 
 ## More generically, map family, parameter -> list-column of type .distribution,
-## then we could use distributional functions
+## then we can use distributional:: functions
+infer_dist <- function(family, parameter, predicted) {
+  names(predicted) = parameter
+  arg <- switch(unique(family), 
+                sample = list(list(predicted)),
+                as.list(predicted)
+  )
+  fn <- eval(rlang::parse_expr(paste0("distributional::dist_", family)))
+  dist <- do.call(fn, arg)
+  dist
+}
+
 
 generic_mean <- function(family, parameter, predicted) {
-  names(predicted) = parameter
-  switch(unique(family),
-         normal = predicted["mu"],
-         sample = mean(predicted)
-  )
+  dist <- infer_dist(family, parameter, predicted)
+  mean(dist)
 }
 
 generic_sd <- function(family, parameter, predicted) {
-  names(predicted) = parameter
-  switch(unique(family),
-         normal = predicted["sigma"],
-         sample = sd(predicted)
-  )
+  dist <- infer_dist(family, parameter, predicted)
+  sqrt(distributional::variance(dist))
 }
 
+
 generic_quantile <- function(p, family, parameter, predicted){
-  names(predicted) = parameter
-  switch(unique(family),
-         normal =  stats::qnorm(p, mean =  predicted["mu"], sd = predicted["sigma"]),
-         sample = stats::quantile(predicted, p, na.rm = TRUE)
-  )
+  # NOTE:
+  # hilo(dist_normal(0,1),95)
+  # is essentially the same as:
+  # qnorm(.975, 0,1); qnorm(.025, 0,1)
+  
+  ## Uglify equivalent:
+  x <- abs(100 - 2* ( 1 - p) * 100) 
+  dist <- infer_dist(family, parameter, predicted)
+  interval <- distributional::hilo(dist, x)
+  if(p > 0.5) 
+    interval$upper
+  else
+    interval$lower
 }
 
 generic_crps <- function(family, parameter, predicted, observed){
   names(predicted) = parameter
+  y <- dplyr::first(observed)
+  tryCatch(
   switch(unique(family),
-         normal = crps_norm(dplyr::first(observed), predicted['mu'], predicted['sigma']),
-         sample = crps_sample(dplyr::first(observed), predicted)
+         lognormal = scoringRules::crps_lnorm(y, predicted['mu'], predicted['sigma'])
+         normal = scoringRules::crps_norm(y, predicted['mu'], predicted['sigma']),
+         sample = scoringRules::crps_sample(y, predicted)
   )
+  error = function(e) NA_real_, finally = NA_real_)
 }
 
+
 generic_logs <- function(family, parameter, predicted, observed){
-  # scoringRules already has a generic crps() method that covers 
-  # all cases except crps_sample.  (which seems to be an oversight)
-  
   names(predicted) = parameter
-  switch(unique(family),
-         normal = logs_norm(dplyr::first(observed), predicted['mu'], predicted['sigma']),
-         sample = logs_sample(dplyr::first(observed), predicted)
-  )
+  y <- dplyr::first(observed)
+  tryCatch(
+    switch(unique(family),
+           lognormal = scoringRules::logs_lnorm(y, predicted['mu'], predicted['sigma'])
+           normal = scoringRules::logs_norm(y, predicted['mu'], predicted['sigma']),
+           sample = scoringRules::logs_sample(y, predicted)
+    )
+    error = function(e) NA_real_, finally = NA_real_)
 }
 
 # scoringRules already has a generic crps() method that covers all cases except crps_sample.
@@ -91,37 +111,6 @@ generic_logs <- function(family, parameter, predicted, observed){
 # do.call(logs, args)
 
 
-
-## Teach crps to treat any NA observations as NA scores:
-crps_sample <- function(y, dat) {
-  tryCatch(scoringRules::crps_sample(y, dat),
-           error = function(e) NA_real_, finally = NA_real_)
-}
-
-crps <- function(y, ...) {
-  tryCatch(scoringRules::crps(y, ...),
-           error = function(e) NA_real_, finally = NA_real_)
-}
-crps_norm <- function(y, mean, sd) {
-  tryCatch(scoringRules::crps_norm(y, mean = mean, sd = sd),
-           error = function(e) NA_real_, finally = NA_real_)
-}
-
-## Teach crps to treat any NA observations as NA scores:
-logs_sample <- function(y, dat) {
-  tryCatch(scoringRules::logs_sample(y, dat),
-           error = function(e) NA_real_, finally = NA_real_)
-}
-
-logs <- function(y, ...) {
-  tryCatch(scoringRules::logs(y, ...),
-           error = function(e) NA_real_, finally = NA_real_)
-}
-
-logs_norm <- function(y, mean, sd) {
-  tryCatch(scoringRules::logs_norm(y, mean = mean, sd = sd),
-           error = function(e) NA_real_, finally = NA_real_)
-}
 
 
 
