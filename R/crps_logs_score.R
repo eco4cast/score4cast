@@ -85,10 +85,10 @@ generic_crps <- function(family, parameter, predicted, observed){
   y <- dplyr::first(observed)
   tryCatch(
   switch(unique(family),
-         lognormal = scoringRules::crps_lnorm(y, predicted['mu'], predicted['sigma'])
+         lognormal = scoringRules::crps_lnorm(y, predicted['mu'], predicted['sigma']),
          normal = scoringRules::crps_norm(y, predicted['mu'], predicted['sigma']),
          sample = scoringRules::crps_sample(y, predicted)
-  )
+  ),
   error = function(e) NA_real_, finally = NA_real_)
 }
 
@@ -98,10 +98,10 @@ generic_logs <- function(family, parameter, predicted, observed){
   y <- dplyr::first(observed)
   tryCatch(
     switch(unique(family),
-           lognormal = scoringRules::logs_lnorm(y, predicted['mu'], predicted['sigma'])
+           lognormal = scoringRules::logs_lnorm(y, predicted['mu'], predicted['sigma']),
            normal = scoringRules::logs_norm(y, predicted['mu'], predicted['sigma']),
            sample = scoringRules::logs_sample(y, predicted)
-    )
+    ),
     error = function(e) NA_real_, finally = NA_real_)
 }
 
