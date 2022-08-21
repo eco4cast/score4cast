@@ -16,6 +16,11 @@ crps_logs_score <- function(forecast, target) {
     map_old_format() # helper routine for backwards compatibility, eventually should be deprecated!
   })
   
+  # Consider turning to fable first, and working on a dist column
+  #  fable <- joined |> 
+  #  group_by(model_id, start_time, site_id, time, family, variable) |> 
+  #  mutate(dist = infer_dist(family, parameter, predicted))
+  
   # groups are required, no group_by(any_of())
   scores <- joined |> 
   dplyr::group_by(model_id, start_time, site_id, time, family, variable) |> 
@@ -43,11 +48,14 @@ crps_logs_score <- function(forecast, target) {
 ## then we can use distributional:: functions
 infer_dist <- function(family, parameter, predicted) {
   names(predicted) = parameter
-  arg <- switch(unique(family), 
+  
+  ## operates on a unique observation (model_id, start_time, site_id, time, family, variable)
+  fam <- unique(family)
+  arg <- switch(fam, 
                 sample = list(list(predicted)),
                 as.list(predicted)
   )
-  fn <- eval(rlang::parse_expr(paste0("distributional::dist_", family)))
+  fn <- eval(rlang::parse_expr(paste0("distributional::dist_", fam)))
   dist <- do.call(fn, arg)
   dist
 }

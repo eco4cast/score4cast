@@ -20,7 +20,7 @@ map_old_format <- function(df) {
       dplyr::mutate(family="normal")
   }
   
-  if( length(dplyr::filter(df, parameter == "mean")) > 0) {
+  if( nrow( dplyr::filter(df, parameter == "mean") ) > 0) {
     df <- df |>  dplyr::mutate(parameter=forcats::fct_recode(parameter,
                                                              mu="mean",
                                                              sigma="sd"))
