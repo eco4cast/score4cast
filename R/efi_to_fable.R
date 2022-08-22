@@ -2,7 +2,7 @@
 efi_to_fable <- function(df) {
   key <- c("model_id", "start_time", "site_id", "variable") 
   tb <- df |> 
-    group_by(model_id, start_time, site_id, time, variable, family, observed) |> 
+    group_by(model_id, start_time, site_id, time, variable, family) |> 
     summarise(predicted = infer_dist(family, parameter, predicted),
               .groups = "drop")
   
