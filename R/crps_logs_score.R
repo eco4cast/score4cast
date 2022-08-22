@@ -21,7 +21,7 @@ crps_logs_score <- function(forecast, target) {
   scores <- joined |> 
   dplyr::group_by(model_id, start_time, site_id, time, family, variable) |> 
   dplyr::summarise(
-    observed = observed,
+     observed = unique(observed), # grouping vars define a unique obs
     crps = generic_crps(family, parameter, predicted, observed),
     logs = generic_logs(family, parameter, predicted, observed),
     mean = generic_mean(family, parameter, predicted),
@@ -35,33 +35,6 @@ crps_logs_score <- function(forecast, target) {
   
   scores
 }
-
-
-
-
-# Consider turning to fable first, and working on a dist column
-efi_to_fable <- function(df) {
-  key <- c("model_id", "start_time", "site_id", "variable") 
-  tb <- df |> 
-    group_by(model_id, start_time, site_id, time, variable, family, observed) |> 
-    summarise(dist = infer_dist(family, parameter, predicted),
-              .groups = "drop") |> 
-    mutate(time = lubridate::as_date(time)) 
-  
-  
-  fc <- tb |> # tsibble bug
-    as_fable(response = "dist", 
-             distribution = dist, 
-             index = time,
-             key = dplyr::any_of(key))               
-
-  fc
-}
-
-## score using fable: 
-# obs <- fc |> as_tsibble() |> select(-dist) |> rename(dist = observed)
-#fc |> accuracy(obs)
-
 
 ## Naming conventions are based on `distributional` package:
 ## https://pkg.mitchelloharawild.com/distributional/reference/index.html
@@ -81,6 +54,10 @@ infer_dist <- function(family, parameter, predicted) {
   dist <- do.call(fn, arg)
   dist
 }
+
+
+
+
 
 
 generic_mean <- function(family, parameter, predicted) {

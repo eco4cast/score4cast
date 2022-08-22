@@ -26,6 +26,7 @@ Imports:
     forcats,
     rlang,
     distributional,
+    fabletools,
     read4cast (>= 0.0.0.9000)
 Suggests:
     bench,
@@ -33,7 +34,6 @@ Suggests:
     lubridate,
     progress,
     purrr,
-    rlang,
     spelling,
     stringr,
     testthat (>= 3.0.0),
