@@ -7,7 +7,6 @@ efi_to_fable <- function(df) {
               .groups = "drop")
   
   fc <- tb  |> 
-    mutate(time = lubridate::as_date(time)) |> # Ick tsibble bug
     fabletools::as_fable(response = "predicted", 
                          distribution = predicted, 
                          index = time,
@@ -19,10 +18,14 @@ efi_to_fable <- function(df) {
 ## score using fable: 
 # source(system.file("extdata/standard-format-examples.R", package="score4cast"))
 # fc <- inner_join(ex_forecast, ex_target) |>  efi_to_fable()
+# summary stats
+# fc |> mutate(mean = mean(predicted), sd = sqrt(distributional::variance(predicted)))
+
+
+
 # obs <- fc |> as_tsibble() |> select(-predicted) |> rename(predicted = observed)
-# fc |> accuracy(obs, measures = lst(log_score), by = c("model_id", "site_id", "start_time", "time", "variable"))
-
-
+# fc |> accuracy(obs, measures = lst(CRPS, log_score), by = c("model_id", "site_id", "start_time", "time", "variable"))
+# 
 # fc |> accuracy(obs)
 
 
