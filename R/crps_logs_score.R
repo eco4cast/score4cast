@@ -16,11 +16,7 @@ crps_logs_score <- function(forecast, target) {
     map_old_format() # helper routine for backwards compatibility, eventually should be deprecated!
   })
   
-  # Consider turning to fable first, and working on a dist column
-  #  fable <- joined |> 
-  #  group_by(model_id, start_time, site_id, time, family, variable) |> 
-  #  mutate(dist = infer_dist(family, parameter, predicted))
-  
+
   # groups are required, no group_by(any_of())
   scores <- joined |> 
   dplyr::group_by(model_id, start_time, site_id, time, family, variable) |> 
@@ -39,6 +35,32 @@ crps_logs_score <- function(forecast, target) {
   
   scores
 }
+
+
+
+
+# Consider turning to fable first, and working on a dist column
+efi_to_fable <- function(df) {
+  key <- c("model_id", "start_time", "site_id", "variable") 
+  tb <- df |> 
+    group_by(model_id, start_time, site_id, time, variable, family, observed) |> 
+    summarise(dist = infer_dist(family, parameter, predicted),
+              .groups = "drop") |> 
+    mutate(time = lubridate::as_date(time)) 
+  
+  
+  fc <- tb |> # tsibble bug
+    as_fable(response = "dist", 
+             distribution = dist, 
+             index = time,
+             key = dplyr::any_of(key))               
+
+  fc
+}
+
+## score using fable: 
+# obs <- fc |> as_tsibble() |> select(-dist) |> rename(dist = observed)
+#fc |> accuracy(obs)
 
 
 ## Naming conventions are based on `distributional` package:

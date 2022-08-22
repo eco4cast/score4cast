@@ -53,6 +53,6 @@ ex_target <- tibble::tribble(
                 time = lubridate::as_datetime(time))
 
 ## could use any of the above forecasts, can even stack forecasts:
-ex_forecast <- dplyr::bind_rows(small_gauss, ensemble_forecast)
+ex_forecast <- dplyr::bind_rows(gaussian_forecast, ensemble_forecast)
 
 
