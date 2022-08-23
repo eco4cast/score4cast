@@ -18,11 +18,20 @@ standardize_format <- function(df, target_vars) {
   }
   df <- dplyr::rename_with(df,renamer)
   
-  column_names <- c("target_id", "model_id", "start_time",
+  deprecrated_names <- c(target_vars,
+                         "target_id", 
+                         "ensemble", 
+                         "statistic", 
+                         "mean",
+                         "sd")
+  
+  column_names <- c(deprecrated_names,
+                    "family", "parameter",
+                    "model_id", "start_time",
                     "pub_time", "site_id", "time",
-                    "variable", "ensemble", "statistic", 
-                    "predicted", "observed", "mean", "sd",
-                    target_vars)
+                    "variable", 
+                    "predicted", "observed"
+                    )
   
   
   #GENERALIZATION:  This is a theme specific hack. How do we generalize?
@@ -81,21 +90,11 @@ select_forecasts <- function(df, only_forecasts){
   df
 }
 
-## Parses neon4cast challenge forecast filename components.
-split_filename <- function(df){
-  ## arguably better to split on "-" and unite date components?
-  if("filename" %in% colnames(df)) {
-    pattern <- "(\\w+)\\-(\\d{4}\\-\\d{2}\\-\\d{2})\\-(\\w+)\\.(csv)?(\\.gz)?(nc)?"
-    df <- df %>% 
-      mutate(target_id = gsub(pattern, "\\1", basename(filename)),
-             pub_time = gsub(pattern, "\\2", basename(filename)),
-             model_id = gsub(pattern, "\\3", basename(filename)))
-  }
-  df
-}
+
 
 ## utils 
 isoweek <- function(time) { # Note: ISOweek calls not duckdb-compatible
   ISOweek::ISOweek2date(paste0(ISOweek::ISOweek(time), "-","1"))
 }
 na_rm <- function(x) as.numeric(stats::na.exclude(x))
+

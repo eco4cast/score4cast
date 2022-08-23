@@ -13,17 +13,20 @@ include_horizon <- function(df,
                                         FALSE)){
   if (!"start_time" %in% colnames(df)) {
     interval <- df %>%
-      group_by(across(any_of(c("target_id", "model_id", "pub_time", 
+      group_by(across(any_of(c("model_id", "pub_time", 
                                "variable", "site_id")))) %>% 
       summarise(#interval = min(time - dplyr::lag(time), na.rm=TRUE),
                 start_time = min(time), #- interval,
                 .groups = "drop")
+    
+    df <- df %>%
+      left_join(interval)
   }
   ## add columns for start_time and horizon
   if(!"horizon" %in% colnames(df)) {
     df <- df %>%
-      left_join(interval) %>% 
-      mutate(horizon = time - start_time)
+      mutate(horizon = lubridate::as_datetime(time) -
+               lubridate::as_datetime(start_time))
   }
   if(!allow_difftime){
     df <- df %>% 

@@ -1,81 +1,80 @@
 
+fc <- "https://data.ecoforecast.org/neon4cast-forecasts/beetles/beetles-2021-05-01-EFInull.csv.gz"
 
-test_that("scoring", {
-
-  fc <- "https://data.ecoforecast.org/forecasts/aquatics/aquatics-2020-09-01-EFInull.csv.gz"
-  df <- score(fc, 
-        "https://data.ecoforecast.org/targets/aquatics/aquatics-targets.csv.gz")
-  expect_true(inherits(df, "data.frame"))
+test_that("family-based standards work", {
+  
+  source(system.file("extdata/standard-format-examples.R",
+                     package="score4cast",
+                     mustWork = TRUE))
+  
+  scores <- crps_logs_score(ex_forecast, ex_target)
+  expect_true(inherits(scores, "data.frame"))
+  
+  who <- colnames(scores)
+  expect_true(all(c("site_id", "time", "family",
+                    "variable", "observed", "crps",
+                    "logs", "mean", "sd", "quantile10", 
+                    "start_time", "model_id") %in%
+    who))
 })
 
-test_that("ticks scores", {
-  
-  fc <- "https://data.ecoforecast.org/forecasts/ticks/ticks-2021-03-31-SynergisTicks.csv"
-  target <- readr::read_csv("https://data.ecoforecast.org/targets/ticks/ticks-targets.csv.gz") %>%
-    mutate(target_id = "ticks") %>% 
-    pivot_target(target_vars = TARGET_VARS)
-  forecast_df <- read4cast::read_forecast(fc)
-  forecast <- forecast_df %>% 
-    mutate(filename= basename(fc)) %>%
-    pivot_forecast(target_vars = TARGET_VARS)
-  crps_logs_score(forecast, target) %>% filter(!is.na(crps))
-  
-  
-  df <- score(fc, "https://data.ecoforecast.org/targets/ticks/ticks-targets.csv.gz",
-              theme = "ticks") %>% filter(!is.na(crps))
-  expect_true(inherits(df, "data.frame"))
-  df
-})
-
-test_that("scoring ncdf files", {
-  skip_on_os("windows")
-  skip_on_os("mac")
-  
-  # NCDF read fails on windows CI, not sure why
-  nc_fc <- "https://data.ecoforecast.org/forecasts/terrestrial_30min/terrestrial_30min-2022-01-01-hist30min.nc"
-  df <- score(nc_fc, "https://data.ecoforecast.org/targets/aquatics/aquatics-targets.csv.gz", theme="terrestrial_30min")
-  expect_true(inherits(df, "data.frame"))
-})
-
-test_that("mean scores", {
-  fc <- "https://data.ecoforecast.org/forecasts/aquatics/aquatics-2021-05-01-wbears_rnn.csv"
-  df <- score(fc, "https://data.ecoforecast.org/targets/aquatics/aquatics-targets.csv.gz", theme="aquatics")
-  expect_true(inherits(df, "data.frame"))
-  null <- "https://data.ecoforecast.org/forecasts/aquatics/aquatics-2021-05-01-EFInull.csv.gz"
-  dn <- score(null, "https://data.ecoforecast.org/targets/aquatics/aquatics-targets.csv.gz", theme="aquatics")
-  expect_true(inherits(dn, "data.frame"))
-  df <- dplyr::bind_rows(df,dn)
-  filled <- fill_scores(df)
-  expect_gt(nrow(filled),0)
-  
-  leaderboard <- mean_scores(filled)
-  expect_gt(nrow(leaderboard),0)
-})
 
 test_that("unit tests", {
-  forecast <- read4cast::read_forecast(
-    paste0("https://data.ecoforecast.org/forecasts/",
-           "aquatics/aquatics-2022-04-07-climatology.csv.gz"))
-  target <- read4cast::read_forecast(
-    paste0("https://data.ecoforecast.org/targets/",
-           "aquatics/aquatics-targets.csv.gz")) |> 
-      mutate(target_id = "theme") |>
-      pivot_target(target_vars = score4cast:::TARGET_VARS)
+
   
-  score(forecast, target)
-  crps_logs_score(forecast,target) |> include_horizon()
+  source(system.file("extdata/standard-format-examples.R",
+                     package="score4cast",
+                     mustWork = TRUE))
   
-  theme = "aquatics"
-  target_vars = TARGET_VARS
-  target <- target %>% 
-    dplyr::mutate(target_id = theme) %>%
-    pivot_target(target_vars)
+  scores <- score(ex_forecast, ex_target)
   
-  forecast <- forecast %>% 
-    dplyr::mutate(target_id = theme) %>%
-    pivot_forecast(target_vars)
+  expect_true(inherits(scores, "data.frame"))
   
-  crps_logs_score(forecast, target) %>%
-    include_horizon()
+  who <- colnames(scores)
+  expect_true(all(c("site_id", "time", "family",
+                    "variable", "observed", "crps",
+                    "logs", "mean", "sd", "quantile10", 
+                    "start_time", "model_id") %in%
+                    who))
+  
+  scores <- crps_logs_score(ex_forecast, ex_target) |> include_horizon()
+  expect_true(inherits(scores, "data.frame"))
+  
+  who <- colnames(scores)
+  expect_true(all(c("site_id", "time", "family",
+                    "variable", "observed", "crps",
+                    "logs", "mean", "sd", "quantile10", 
+                    "start_time", "model_id", "horizon") %in%
+                    who))
   
 })
+  
+test_that("unit tests", {
+    
+  
+  
+  source(system.file("extdata/standard-format-examples.R",
+                     package="score4cast",
+                     mustWork = TRUE))
+  
+  scores <- score(ex_forecast, ex_target)
+  filled <- fill_scores(scores, "gauss_team")
+  expect_true(inherits(filled, "data.frame"))
+  expect_gt(nrow(filled), 1)
+  
+  df <- mean_scores(filled)
+  expect_true(inherits(df, "data.frame"))
+  expect_gt(nrow(df), 1)
+  
+  })
+
+
+
+
+## All these tests involve backwards-compabible formats 
+
+
+
+
+
+
