@@ -11,7 +11,7 @@
 crps_logs_score <- function(forecast, target) {
   
   target <- target |>
-    select(time, site_id, variable, observed)
+    dplyr::select(time, site_id, variable, observed)
   
   suppressMessages({ # don't  tell me what we are joining by.
   joined <- 
