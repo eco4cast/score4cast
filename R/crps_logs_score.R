@@ -27,6 +27,7 @@ crps_logs_score <- function(forecast, target) {
     crps = generic_crps(family, parameter, predicted, observed),
     logs = generic_logs(family, parameter, predicted, observed),
     mean = generic_mean(family, parameter, predicted),
+    #median = generic_median(family, parameter, predicted),
     sd = generic_sd(family, parameter, predicted),
     quantile02.5 = generic_quantile(0.025, family, parameter, predicted),
     quantile10 = generic_quantile(0.10, family, parameter, predicted),
@@ -57,10 +58,14 @@ infer_dist <- function(family, parameter, predicted) {
   dist
 }
 
-
 generic_mean <- function(family, parameter, predicted) {
   dist <- infer_dist(family, parameter, predicted)
   mean(dist)
+}
+
+generic_median <- function(family, parameter, predicted) {
+  dist <- infer_dist(family, parameter, predicted)
+  median(dist)
 }
 
 generic_sd <- function(family, parameter, predicted) {
