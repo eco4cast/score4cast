@@ -9,14 +9,16 @@
 #' @param target a target data.frame in long EFI-standard format
 #' @export
 crps_logs_score <- function(forecast, target) {
-
+  
+  target <- target |>
+    select(time, site_id, variable, observed)
+  
   suppressMessages({ # don't  tell me what we are joining by.
   joined <- 
-    dplyr::inner_join(forecast, target) |> 
+    dplyr::left_join(forecast, target, by = c("site_id", "time", "variable")) |> 
     map_old_format() # helper routine for backwards compatibility, eventually should be deprecated!
   })
   
-
   # groups are required, no group_by(any_of())
   scores <- joined |> 
   dplyr::group_by(model_id, start_time, site_id, time, family, variable) |> 
@@ -54,10 +56,6 @@ infer_dist <- function(family, parameter, predicted) {
   dist <- do.call(fn, arg)
   dist
 }
-
-
-
-
 
 
 generic_mean <- function(family, parameter, predicted) {
