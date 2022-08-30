@@ -15,6 +15,24 @@ efi_to_fable <- function(df) {
   fc
 }
 
+
+## then we can use distributional:: functions
+infer_dist <- function(family, parameter, predicted) {
+  names(predicted) = parameter
+  
+  ## operates on a unique observation (model_id, start_time, site_id, time, family, variable)
+  fam <- unique(family)
+  arg <- switch(fam, 
+                sample = list(list(predicted)),
+                as.list(predicted)
+  )
+  fn <- eval(rlang::parse_expr(paste0("distributional::dist_", fam)))
+  dist <- do.call(fn, arg)
+  dist
+}
+
+
+
 ## score using fable: 
 # source(system.file("extdata/standard-format-examples.R", package="score4cast"))
 # fc <- inner_join(ex_forecast, ex_target) |>  efi_to_fable()

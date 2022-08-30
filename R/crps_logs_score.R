@@ -43,20 +43,6 @@ crps_logs_score <- function(forecast, target) {
 ## https://pkg.mitchelloharawild.com/distributional/reference/index.html
 
 ## More generically, map family, parameter -> list-column of type .distribution,
-## then we can use distributional:: functions
-infer_dist <- function(family, parameter, predicted) {
-  names(predicted) = parameter
-  
-  ## operates on a unique observation (model_id, start_time, site_id, time, family, variable)
-  fam <- unique(family)
-  arg <- switch(fam, 
-                sample = list(list(predicted)),
-                as.list(predicted)
-  )
-  fn <- eval(rlang::parse_expr(paste0("distributional::dist_", fam)))
-  dist <- do.call(fn, arg)
-  dist
-}
 
 generic_mean <- function(family, parameter, predicted) {
   dist <- infer_dist(family, parameter, predicted)
