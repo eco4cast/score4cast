@@ -1,4 +1,6 @@
 
+
+
 fable_to_efi <- function(df) {
   
   ## do one model at a time.
@@ -24,4 +26,8 @@ fable_to_efi <- function(df) {
     df2
     
 }
+
+## Note, there is still an additional case of generating an ensemble from from
+## parameteric fable.  Not ideal but currently necessary if distribution is not
+## supported; e.g. required for transformed distributionals currently...
 
