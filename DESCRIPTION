@@ -39,6 +39,8 @@ Suggests:
     testthat (>= 3.0.0),
     tidyselect,
     vctrs,
-    curl
+    curl,
+    tsibble,
+    tibble
 Remotes: 
     github::eco4cast/read4cast

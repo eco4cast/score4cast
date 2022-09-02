@@ -82,5 +82,5 @@ mean_scores <- function(df){
 }
 
 
-globalVariables(c("crps_null", "logs_null", 
-                  "crps_model", "logs_model"), "score4cast")
+globalVariables(c("crps_null", "logs_null", "crps", "logs", "model_id",
+                  "variable", "crps_model", "logs_model"), "score4cast")

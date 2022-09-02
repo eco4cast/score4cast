@@ -98,3 +98,8 @@ isoweek <- function(time) { # Note: ISOweek calls not duckdb-compatible
 }
 na_rm <- function(x) as.numeric(stats::na.exclude(x))
 
+
+
+
+
+globalVariables(c("target_id", "time", "forecast"), package="score4cast")

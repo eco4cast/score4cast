@@ -31,7 +31,8 @@ infer_dist <- function(family, parameter, predicted) {
   dist
 }
 
-
+globalVariables(c("model_id", "start_time", "site_id", "variable", "time"),
+                package="score4cast")
 
 ## score using fable: 
 # source(system.file("extdata/standard-format-examples.R", package="score4cast"))

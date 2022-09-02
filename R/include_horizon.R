@@ -36,4 +36,5 @@ include_horizon <- function(df,
   df
 }
 
+globalVariables(c("time", "start_time", "horizon"), package="score4cast")
 

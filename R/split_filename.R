@@ -10,3 +10,4 @@ split_filename <- function(df){
   }
   df
 }
+globalVariables(c("filename"), package="score4cast")

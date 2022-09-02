@@ -32,3 +32,5 @@ map_old_format <- function(df) {
   }
   df
 }
+
+globalVariables(c("ensemble", "pub_time"), package="score4cast")

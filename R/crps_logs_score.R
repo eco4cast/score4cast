@@ -11,7 +11,7 @@
 crps_logs_score <- function(forecast, target) {
   
   target <- target |>
-    dplyr::select(time, site_id, variable, observed)
+    dplyr::select("time", "site_id", "variable", "observed")
   
   # Apply this earlier?
   forecast <- map_old_format(forecast)
@@ -24,13 +24,14 @@ crps_logs_score <- function(forecast, target) {
   grouping <- c("model_id", "start_time", "site_id", 
                 "time", "family", "variable")
   
+ bench::bench_time({ 
   scores <- joined |> 
       dplyr::group_by(dplyr::across(dplyr::any_of(grouping))) |> 
       dplyr::summarise(
         observed = unique(observed), # grouping vars define a unique obs
-        crps = score4cast:::generic_crps(family, parameter, predicted, observed),
-        logs = score4cast:::generic_logs(family, parameter, predicted, observed),
-        dist = score4cast:::infer_dist(family, parameter, predicted),
+        crps = generic_crps(family, parameter, predicted, observed),
+        logs = generic_logs(family, parameter, predicted, observed),
+        dist = infer_dist(family, parameter, predicted),
         .groups = "drop") |>
       dplyr::mutate(
         mean = mean(dist),
@@ -40,9 +41,9 @@ crps_logs_score <- function(forecast, target) {
         quantile02.5 = distributional::hilo(dist, 95)$lower,
         quantile90 = distributional::hilo(dist, 90)$upper,
         quantile10 = distributional::hilo(dist, 90)$lower
-      ) |> 
-      select(-dist)
-    
+      ) |> dplyr::select(-dist)
+ })
+ 
   scores
 }
 
@@ -83,14 +84,10 @@ generic_logs <- function(family, parameter, predicted, observed){
 
 
 
+globalVariables(c("family", "parameter", "predicted", "observed", "dist"),
+                package="score4cast")
 
 
-globalVariables(c("crps" ,"filename",
-                  "family", "site_id", "parameter", "ensemble",
-                  "horizon", "model_id", "target_id",
-                  "logs","observed", "pub_time", "start_time",
-                  "predicted", "variable", "interval",
-                  "statistic", "time",
-                  "mean", "sd", "forecast",
-                  "siteID", "plotID", "height", "depth"), package="score4cast")
+#globalVariables(c("crps" ,"filename", "site_id", "ensemble", "horizon", "model_id", "target_id",  "logs", "pub_time", "start_time", "variable", "interval",  "statistic", "time",
+#                  "mean", "sd", "forecast",   "siteID", "plotID", "height", "depth"), package="score4cast")
 

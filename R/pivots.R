@@ -49,3 +49,9 @@ pivot_forecast <- function(df, target_vars=""){
   
   df
 }
+
+
+
+globalVariables(c("statistic"), package="score4cast")
+
+
