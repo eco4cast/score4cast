@@ -24,7 +24,7 @@ crps_logs_score <- function(forecast, target) {
   grouping <- c("model_id", "start_time", "site_id", 
                 "time", "family", "variable")
   
- bench::bench_time({ 
+
   scores <- joined |> 
       dplyr::group_by(dplyr::across(dplyr::any_of(grouping))) |> 
       dplyr::summarise(
@@ -42,7 +42,7 @@ crps_logs_score <- function(forecast, target) {
         quantile90 = distributional::hilo(dist, 90)$upper,
         quantile10 = distributional::hilo(dist, 90)$lower
       ) |> dplyr::select(-dist)
- })
+ 
  
   scores
 }
