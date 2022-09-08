@@ -27,16 +27,21 @@ map_old_format <- function(df, filename=NULL) {
   }
 
   ##
-  if ("pub_time" %in% colnames(fc)) {
+  if ("pub_time" %in% colnames(df) && ! "reference_datetime" %in% colnames(df)) {
     df <- df |> rename(reference_datetime = pub_time)
   }
-  if ("start_time" %in% colnames(fc)) {
+  if ("start_time" %in% colnames(df) && ! "reference_datetime" %in% colnames(df)) {
     df <- df |> rename(reference_datetime = start_time)
   }
-  if ("start_time" %in% colnames(fc)) {
-    df  <- df |> select(-start_time)
+  if ("start_time" %in% colnames(df)) {
+    df  <- df |> select(-start_time) # now drow old name
   }
-  if("time" %in% colnames(fc)) {
+  
+  if ("pub_time" %in% colnames(df)) { # don't need this, keeps things simple/standard
+    df  <- df |> select(-pub_time)
+  }
+  
+  if("time" %in% colnames(df)) {
     df <- df |> rename(datetime = time)
   }
 
