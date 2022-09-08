@@ -34,11 +34,11 @@ map_old_format <- function(df, filename=NULL) {
     df <- df |> rename(reference_datetime = start_time)
   }
   if ("start_time" %in% colnames(df)) {
-    df  <- df |> select(-start_time) # now drow old name
+    df  <- df |> select(-dplyr::any_of("start_time")) # now drow old name
   }
   
   if ("pub_time" %in% colnames(df)) { # don't need this, keeps things simple/standard
-    df  <- df |> select(-pub_time)
+    df  <- df |> select(-dplyr::any_of("pub_time"))
   }
   
   if("time" %in% colnames(df)) {
@@ -65,5 +65,5 @@ map_old_format <- function(df, filename=NULL) {
   
 }
 
-globalVariables(c("ensemble", "pub_time", "start_time", "filename"),
+globalVariables(c("ensemble", "filename", "pub_time", "start_time"),
                 package="score4cast")

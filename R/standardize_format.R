@@ -10,7 +10,7 @@ standardize_format <- function(df, target_vars) {
                                 "site"   = "site_id",
                                 "theme"  = "target_id",
                                 "team"   = "model_id",
-                                "forecast_start_time" = "start_time",
+                                "forecast_start_time" = "reference_datetime",
                                 "issue_date" = "pub_time",
                                 "Amblyomma americanum" = "amblyomma_americanum",
                                 n),
@@ -27,8 +27,8 @@ standardize_format <- function(df, target_vars) {
   
   column_names <- c(deprecrated_names,
                     "family", "parameter",
-                    "model_id", "start_time",
-                    "pub_time", "site_id", "time",
+                    "model_id", "reference_datetime",
+                    "site_id", "datetime",
                     "variable", 
                     "predicted", "observed"
                     )
@@ -40,7 +40,7 @@ standardize_format <- function(df, target_vars) {
       all(pull(df,target_id) %in% c("ticks", "beetles"))
       ) {
     df <- df %>% 
-      mutate(time = isoweek(time))
+      mutate(datetime = isoweek(datetime))
     
 ### DEPRECATATED ticks pools up to siteID instead
 #    if("plotID" %in% names(df)) {
@@ -76,7 +76,7 @@ standardize_format <- function(df, target_vars) {
 
 enforce_schema <- function(df) {
   df %>% 
-    mutate(across(any_of(c("time", "start_time")),
+    mutate(across(any_of(c("datetime", "reference_datetime")),
                   .fns = as.POSIXct))
 }
 
@@ -93,8 +93,8 @@ select_forecasts <- function(df, only_forecasts){
 
 
 ## utils 
-isoweek <- function(time) { # Note: ISOweek calls not duckdb-compatible
-  ISOweek::ISOweek2date(paste0(ISOweek::ISOweek(time), "-","1"))
+isoweek <- function(datetime) { # Note: ISOweek calls not duckdb-compatible
+  ISOweek::ISOweek2date(paste0(ISOweek::ISOweek(datetime), "-","1"))
 }
 na_rm <- function(x) as.numeric(stats::na.exclude(x))
 
@@ -102,4 +102,4 @@ na_rm <- function(x) as.numeric(stats::na.exclude(x))
 
 
 
-globalVariables(c("target_id", "time", "forecast"), package="score4cast")
+globalVariables(c("target_id", "datetime", "forecast"), package="score4cast")

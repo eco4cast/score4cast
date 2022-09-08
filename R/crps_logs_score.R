@@ -11,18 +11,18 @@
 crps_logs_score <- function(forecast, target) {
   
   target <- target |>
-    dplyr::select("time", "site_id", "variable", "observed")
+    dplyr::select("datetime", "site_id", "variable", "observed")
   
   # Apply this earlier?
   forecast <- map_old_format(forecast)
   
   
   joined <- forecast |> 
-    dplyr::left_join(target, by = c("site_id", "time", "variable"))
+    dplyr::left_join(target, by = c("site_id", "datetime", "variable"))
   
   # use with across(any_of()) to avoid bare names; allows optional terms
-  grouping <- c("model_id", "start_time", "site_id", 
-                "time", "family", "variable")
+  grouping <- c("model_id", "reference_datetime", "site_id", 
+                "datetime", "family", "variable")
   
 
   scores <- joined |> 
@@ -88,6 +88,4 @@ globalVariables(c("family", "parameter", "predicted", "observed", "dist"),
                 package="score4cast")
 
 
-#globalVariables(c("crps" ,"filename", "site_id", "ensemble", "horizon", "model_id", "target_id",  "logs", "pub_time", "start_time", "variable", "interval",  "statistic", "time",
-#                  "mean", "sd", "forecast",   "siteID", "plotID", "height", "depth"), package="score4cast")
 

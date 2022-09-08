@@ -139,16 +139,16 @@ score_safely <- purrr::safely(score_if)
 # works with local or target data.frame too
 subset_target <- function(forecast_df, target) {
   range <- forecast_df %>% 
-    summarise(start = min(time),
-              end=max(time))
+    summarise(start = min(datetime),
+              end=max(datetime))
   start <- lubridate::as_datetime(range$start[[1]])
   end <- lubridate::as_datetime(range$end[[1]])
   year <- lubridate::year(start)
   target %>%
     filter(
       #year >= {{year}}, # potential speed up, but arrow bug...
-      time >= {{start}}, 
-      time <= {{end}}) %>%
+      datetime >= {{start}}, 
+      datetime <= {{end}}) %>%
     dplyr::collect()
 }
 

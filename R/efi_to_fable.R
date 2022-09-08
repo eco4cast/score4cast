@@ -1,15 +1,15 @@
 # Consider turning to fable first, and working on a dist column
 efi_to_fable <- function(df) {
-  key <- c("model_id", "start_time", "site_id", "variable") 
+  key <- c("model_id", "reference_datetime", "site_id", "variable") 
   tb <- df |> 
-    group_by(model_id, start_time, site_id, time, variable, family) |> 
+    group_by(model_id, reference_datetime, site_id, datetime, variable, family) |> 
     summarise(predicted = infer_dist(family, parameter, predicted),
               .groups = "drop")
   
   fc <- tb  |> 
     fabletools::as_fable(response = "predicted", 
                          distribution = predicted, 
-                         index = time,
+                         index = datetime,
                          key = dplyr::any_of(key))               
   
   fc
@@ -20,7 +20,7 @@ efi_to_fable <- function(df) {
 infer_dist <- function(family, parameter, predicted) {
   names(predicted) = parameter
   
-  ## operates on a unique observation (model_id, start_time, site_id, time, family, variable)
+  ## operates on a unique observation (model_id, reference_datetime, site_id, datetime, family, variable)
   fam <- unique(family)
   arg <- switch(fam, 
                 sample = list(list(predicted)),
@@ -31,7 +31,8 @@ infer_dist <- function(family, parameter, predicted) {
   dist
 }
 
-globalVariables(c("model_id", "start_time", "site_id", "variable", "time"),
+globalVariables(c("model_id", "reference_datetime", 
+                  "site_id", "variable", "datetime"),
                 package="score4cast")
 
 ## score using fable: 
@@ -43,7 +44,7 @@ globalVariables(c("model_id", "start_time", "site_id", "variable", "time"),
 
 
 # obs <- fc |> as_tsibble() |> select(-predicted) |> rename(predicted = observed)
-# fc |> accuracy(obs, measures = lst(CRPS, log_score), by = c("model_id", "site_id", "start_time", "time", "variable"))
+# fc |> accuracy(obs, measures = lst(CRPS, log_score), by = c("model_id", "site_id", "reference_datetime", "datetime", "variable"))
 # 
 # fc |> accuracy(obs)
 
