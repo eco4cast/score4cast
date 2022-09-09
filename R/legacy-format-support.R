@@ -65,5 +65,5 @@ map_old_format <- function(df, filename=NULL) {
   
 }
 
-globalVariables(c("ensemble", "filename", "pub_time", "start_time"),
+globalVariables(c("ensemble", "filename", "pub_time", "start_time", "time"),
                 package="score4cast")
