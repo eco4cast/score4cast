@@ -11,10 +11,10 @@ test_that("family-based standards work", {
   expect_true(inherits(scores, "data.frame"))
   
   who <- colnames(scores)
-  expect_true(all(c("site_id", "time", "family",
+  expect_true(all(c("site_id", "datetime", "family",
                     "variable", "observed", "crps",
                     "logs", "mean", "sd", "quantile10", 
-                    "start_time", "model_id") %in%
+                    "reference_datetime", "model_id") %in%
     who))
 })
 
@@ -31,20 +31,20 @@ test_that("unit tests", {
   expect_true(inherits(scores, "data.frame"))
   
   who <- colnames(scores)
-  expect_true(all(c("site_id", "time", "family",
+  expect_true(all(c("site_id", "datetime", "family",
                     "variable", "observed", "crps",
                     "logs", "mean", "sd", "quantile10", 
-                    "start_time", "model_id") %in%
+                    "reference_datetime", "model_id") %in%
                     who))
   
   scores <- crps_logs_score(ex_forecast, ex_target) |> include_horizon()
   expect_true(inherits(scores, "data.frame"))
   
   who <- colnames(scores)
-  expect_true(all(c("site_id", "time", "family",
+  expect_true(all(c("site_id", "datetime", "family",
                     "variable", "observed", "crps",
                     "logs", "mean", "sd", "quantile10", 
-                    "start_time", "model_id", "horizon") %in%
+                    "reference_datetime", "model_id", "horizon") %in%
                     who))
   
 })

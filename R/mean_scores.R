@@ -38,12 +38,12 @@ fill_scores <- function(df, null_model = "EFInull") {
   
   null <- df %>%
     filter(model_id == null_model) %>%
-    select("variable", "site_id", "time",
-           "start_time", "crps", "logs")
+    select("variable", "site_id", "datetime",
+           "reference_datetime", "crps", "logs")
   all <- tidyr::expand_grid(null, team)
   na_filled <- left_join(all, df,
                          by = c("model_id", "variable",
-                                "site_id", "time", "start_time"),
+                                "site_id", "datetime", "reference_datetime"),
                          suffix = c("_null", "_model"))
   null_filled <- na_filled %>% mutate(
     crps = case_when(is.na(crps_model) ~ crps_null,
@@ -82,5 +82,5 @@ mean_scores <- function(df){
 }
 
 
-globalVariables(c("crps_null", "logs_null", 
-                  "crps_model", "logs_model"), "score4cast")
+globalVariables(c("crps_null", "logs_null", "crps", "logs", "model_id",
+                  "variable", "crps_model", "logs_model"), "score4cast")

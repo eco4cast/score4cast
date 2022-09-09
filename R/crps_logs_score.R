@@ -11,84 +11,46 @@
 crps_logs_score <- function(forecast, target) {
   
   target <- target |>
-    dplyr::select(time, site_id, variable, observed)
+    dplyr::select("datetime", "site_id", "variable", "observed")
   
-  suppressMessages({ # don't  tell me what we are joining by.
-  joined <- 
-    dplyr::left_join(forecast, target, by = c("site_id", "time", "variable")) |> 
-    map_old_format() # helper routine for backwards compatibility, eventually should be deprecated!
-  })
+  # Apply this earlier?
+  forecast <- map_old_format(forecast)
   
-  # groups are required, no group_by(any_of())
+  
+  joined <- forecast |> 
+    dplyr::left_join(target, by = c("site_id", "datetime", "variable"))
+  
+  # use with across(any_of()) to avoid bare names; allows optional terms
+  grouping <- c("model_id", "reference_datetime", "site_id", 
+                "datetime", "family", "variable")
+  
+
   scores <- joined |> 
-  dplyr::group_by(model_id, start_time, site_id, time, family, variable) |> 
-  dplyr::summarise(
-     observed = unique(observed), # grouping vars define a unique obs
-    crps = generic_crps(family, parameter, predicted, observed),
-    logs = generic_logs(family, parameter, predicted, observed),
-    mean = generic_mean(family, parameter, predicted),
-    #median = generic_median(family, parameter, predicted),
-    sd = generic_sd(family, parameter, predicted),
-    quantile02.5 = generic_quantile(0.025, family, parameter, predicted),
-    quantile10 = generic_quantile(0.10, family, parameter, predicted),
-    quantile90 = generic_quantile(0.90, family, parameter, predicted),
-    quantile97.5 = generic_quantile(0.975, family, parameter, predicted),
-    .groups = "drop"
-  )
-  
+      dplyr::group_by(dplyr::across(dplyr::any_of(grouping))) |> 
+      dplyr::summarise(
+        observed = unique(observed), # grouping vars define a unique obs
+        crps = generic_crps(family, parameter, predicted, observed),
+        logs = generic_logs(family, parameter, predicted, observed),
+        dist = infer_dist(family, parameter, predicted),
+        .groups = "drop") |>
+      dplyr::mutate(
+        mean = mean(dist),
+        #median = median(dist),
+        sd = sqrt(distributional::variance(dist)),
+        quantile97.5 = distributional::hilo(dist, 95)$upper,
+        quantile02.5 = distributional::hilo(dist, 95)$lower,
+        quantile90 = distributional::hilo(dist, 90)$upper,
+        quantile10 = distributional::hilo(dist, 90)$lower
+      ) |> dplyr::select(-dist)
+ 
+ 
   scores
 }
 
 ## Naming conventions are based on `distributional` package:
 ## https://pkg.mitchelloharawild.com/distributional/reference/index.html
 
-## More generically, map family, parameter -> list-column of type .distribution,
-## then we can use distributional:: functions
-infer_dist <- function(family, parameter, predicted) {
-  names(predicted) = parameter
-  
-  ## operates on a unique observation (model_id, start_time, site_id, time, family, variable)
-  fam <- unique(family)
-  arg <- switch(fam, 
-                sample = list(list(predicted)),
-                as.list(predicted)
-  )
-  fn <- eval(rlang::parse_expr(paste0("distributional::dist_", fam)))
-  dist <- do.call(fn, arg)
-  dist
-}
 
-generic_mean <- function(family, parameter, predicted) {
-  dist <- infer_dist(family, parameter, predicted)
-  mean(dist)
-}
-
-generic_median <- function(family, parameter, predicted) {
-  dist <- infer_dist(family, parameter, predicted)
-  median(dist)
-}
-
-generic_sd <- function(family, parameter, predicted) {
-  dist <- infer_dist(family, parameter, predicted)
-  sqrt(distributional::variance(dist))
-}
-
-
-generic_quantile <- function(p, family, parameter, predicted){
-  # NOTE:
-  # hilo(dist_normal(0,1),95)
-  # is essentially the same as:
-  # qnorm(.975, 0,1); qnorm(.025, 0,1)
-  
-  ## Uglify equivalent:
-  x <- abs(100 - 2* ( 1 - p) * 100) 
-  dist <- infer_dist(family, parameter, predicted)
-  interval <- distributional::hilo(dist, x)
-  if(p > 0.5) 
-    interval$upper
-  else
-    interval$lower
-}
 
 generic_crps <- function(family, parameter, predicted, observed){
   names(predicted) = parameter
@@ -122,14 +84,8 @@ generic_logs <- function(family, parameter, predicted, observed){
 
 
 
+globalVariables(c("family", "parameter", "predicted", "observed", "dist"),
+                package="score4cast")
 
 
-globalVariables(c("crps" ,"filename",
-                  "family", "site_id", "parameter", "ensemble",
-                  "horizon", "model_id", "target_id",
-                  "logs","observed", "pub_time", "start_time",
-                  "predicted", "variable", "interval",
-                  "statistic", "time",
-                  "mean", "sd", "forecast",
-                  "siteID", "plotID", "height", "depth"), package="score4cast")
 
