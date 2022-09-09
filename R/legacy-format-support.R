@@ -26,6 +26,14 @@ map_old_format <- function(df, filename=NULL) {
                                                              sigma="sd"))
   }
 
+  ## can only recode if factor is actually used:
+  if( nrow( dplyr::filter(df, family == "ensemble") ) > 0) {
+    df <- df |> dplyr::mutate(family = 
+                               forcats::fct_recode(family,
+                                                   sample="ensemble")
+    )
+  }
+
   ##
   if ("pub_time" %in% colnames(df) && ! "reference_datetime" %in% colnames(df)) {
     df <- df |> rename(reference_datetime = pub_time)
