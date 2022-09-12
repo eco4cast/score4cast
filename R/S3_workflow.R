@@ -118,7 +118,7 @@ score_if <- function(forecast_file,
   suppressMessages({ ## no message about 'new columns'
     forecast_df <- 
       read4cast::read_forecast(forecast_file, s3 = s3_forecasts) %>% 
-      score4cast:::map_old_format() %>% 
+      map_old_format() %>% 
       mutate(filename = basename(forecast_file))
   })
   target_df <- subset_target(forecast_df, target)
