@@ -13,8 +13,8 @@ crps_logs_score <- function(forecast, target) {
   target <- target |>
     dplyr::select("datetime", "site_id", "variable", "observed")
   
-  # Apply this earlier?
-  forecast <- map_old_format(forecast)
+  # Apply this earlier
+  # forecast <- map_old_format(forecast)
   
   
   joined <- forecast |> 
