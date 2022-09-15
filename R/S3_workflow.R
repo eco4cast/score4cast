@@ -23,18 +23,19 @@ score_theme <- function(theme,
                         s3_forecasts, 
                         s3_targets, 
                         s3_scores, 
-                        s3_prov, 
+                        s3_prov,
                         after = as.Date("2022-01-01"),
                         local_prov = "scoring_provenance.csv"){
   
-  #prov_download(s3_prov, local_prov)
-  #prov_df <- readr::read_csv(local_prov, show_col_types = FALSE)
+  prov_download(s3_prov, local_prov)
+  prov_df <- readr::read_csv(local_prov, show_col_types = FALSE)
   
-  options("readr.show_progress"=FALSE)
+  
+  timing <- bench::bench_time({
+    
   target <- get_target(theme, s3_targets)
-  
   fc <- arrow::open_dataset(s3_forecasts$path(glue::glue("parquet/{theme}"))) 
-
+w
   ## We will score in group chunks (model/date/site) to save RAM
   grouping <- fc |> 
     dplyr::distinct(model_id, reference_datetime, site_id) |>
@@ -44,21 +45,39 @@ score_theme <- function(theme,
   for (i in 1:n) {  
     
     group <- grouping[i,]
-    score <- fc |> 
-      dplyr::filter(model_id == group$model_id, 
-                    reference_datetime == group$reference_datetime,
-                    site_id == group$site_id) |> 
-      dplyr::collect() |> 
-      crps_logs_score(target)
     
-    arrow::write_dataset(score, s3_scores,
-                  partitioning=c("model_id", "reference_datetime", "site_id"))
+    ## 
+    tg <- target |> filter(time >= group$reference_datetime)
+    id <- rlang::hash(list(group$model_id, 
+                           group$reference_datetime,
+                           group$site_id,
+                           tg))
+    if (!prov_has(id, local_prov)) {
+      score <- fc |> 
+        dplyr::filter(model_id == group$model_id, 
+                      reference_datetime == group$reference_datetime,
+                      site_id == group$site_id) |> 
+        dplyr::collect() |> 
+        crps_logs_score(target)
+      
+      arrow::write_dataset(score, s3_scores,
+                    partitioning=c("model_id", "reference_datetime", "site_id"))
+      prov_add(id, prov_df)
+    }
+    
   }
   
+ })
   
+  prov_download(s3_prov, local_prov)
+  timing
 }
 
+
+
+
 get_target <- function(theme, s3) {
+  options("readr.show_progress"=FALSE)
   key <- glue::glue("{theme}/{theme}-targets.csv.gz")
   read4cast::read_forecast(key, s3 = s3)
 }
@@ -71,7 +90,15 @@ get_target <- function(theme, s3) {
 
 
 
+prov_has <- function(id, prov) {
+  ## would be fast even with remote file
+  prov |> dplyr::filter(prov == id) |> nrow() >= 1
+}
 
+prov_add <- function(id, local_prov = "scoring_provenance.csv") {
+  new_prov <-  dplyr::tibble(prov=id)
+  readr::write_csv(new_prov, local_prov, append=TRUE)
+}
 
 prov_download <- function(s3_prov, local_prov = "scoring_provenance.csv") {
   if(!"scoring_provenance.csv" %in% s3_prov$ls() ) {
@@ -88,3 +115,5 @@ prov_upload <- function(s3_prov, local_prov = "scoring_provenance.csv") {
   path <- s3_prov$path("scoring_provenance.csv")
   prov <- arrow::write_csv_arrow(prov, path)
 }
+
+
