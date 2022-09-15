@@ -24,7 +24,6 @@ crps_logs_score <- function(forecast, target) {
   grouping <- c("model_id", "reference_datetime", "site_id", 
                 "datetime", "family", "variable")
   
-
   scores <- joined |> 
       dplyr::group_by(dplyr::across(dplyr::any_of(grouping))) |> 
       dplyr::summarise(
