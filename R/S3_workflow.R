@@ -33,25 +33,25 @@ score_theme <- function(theme,
   options("readr.show_progress"=FALSE)
   target <- get_target(theme, s3_targets)
   
-  fc <- open_dataset(s3_forecasts$path(glue::glue("parquet/{theme}"))) 
+  fc <- arrow::open_dataset(s3_forecasts$path(glue::glue("parquet/{theme}"))) 
 
   ## We will score in group chunks (model/date/site) to save RAM
   grouping <- fc |> 
-    distinct(model_id, reference_datetime, site_id) |>
-    collect()
+    dplyr::distinct(model_id, reference_datetime, site_id) |>
+    dplyr::collect()
   n <- nrow(grouping)
   
   for (i in 1:n) {  
     
     group <- grouping[i,]
     score <- fc |> 
-      filter(model_id == group$model_id, 
-             reference_datetime == group$reference_datetime,
-             site_id == group$site_id) |> 
-      collect() |> 
+      dplyr::filter(model_id == group$model_id, 
+                    reference_datetime == group$reference_datetime,
+                    site_id == group$site_id) |> 
+      dplyr::collect() |> 
       crps_logs_score(target)
     
-    write_dataset(score, s3_scores,
+    arrow::write_dataset(score, s3_scores,
                   partitioning=c("model_id", "reference_datetime", "site_id"))
   }
   
