@@ -35,7 +35,7 @@ score_theme <- function(theme,
     
   target <- get_target(theme, s3_targets)
   fc <- arrow::open_dataset(s3_forecasts$path(glue::glue("parquet/{theme}"))) 
-w
+
   ## We will score in group chunks (model/date/site) to save RAM
   grouping <- fc |> 
     dplyr::distinct(model_id, reference_datetime, site_id) |>
