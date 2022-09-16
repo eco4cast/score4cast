@@ -15,7 +15,9 @@
 #' This connection requires write access, e.g. by specifying 
 #  AWS_ACCESS_KEY_ID & AWS_SECRET_ACCESS_KEY env vars.
 #' @param s3_prov a connection from [arrow::s3_bucket]
-#' @param after a date by which to filter out older forecasts from (re)-scoring
+#' @param max_horizon days after the reference_date that a given forecast should cover.
+#' Can exceed the actual max horizon. Allows us to avoid re-scoring old forecasts when
+#' targets are updated with future values but leave old values unchanged.
 #' @param local_prov path to local csv file which will be used to 
 #' store provenance until theme is finished scoring.
 #' @export
@@ -24,7 +26,7 @@ score_theme <- function(theme,
                         s3_targets, 
                         s3_scores, 
                         s3_prov,
-                        after = as.Date("2022-01-01"),
+                        max_horizon = 365L,
                         local_prov = "scoring_provenance.csv"){
   
   prov_download(s3_prov, local_prov)
@@ -49,17 +51,14 @@ score_theme <- function(theme,
     clear = FALSE, width= 80)  
   for (i in 1:n) {  
 
-    pb$tick()
-    group <- grouping[i,]
-    fc_i <- fc |> 
-      dplyr::filter(model_id == group$model_id, 
-                    reference_datetime == group$reference_datetime,
-                    site_id == group$site_id) |> 
-      dplyr::collect() # may as well...
     
-    bounds <- fc_i |>
-      dplyr::summarise(max = max(datetime),
-                       min = min(datetime)) 
+    group <- grouping[i,]
+
+    ref <- lubridate::as_date(group$reference_datetime)
+    bounds <- list(min = ref, max = ref + max_horizon)
+      # fc_i |>
+      # dplyr::summarise(max = max(datetime),
+      #                  min = min(datetime)) 
     
     tg <- target |>
       filter(datetime >= bounds$min,
@@ -72,6 +71,13 @@ score_theme <- function(theme,
                            tg))
     
     if (!prov_has(id, prov_df)) {
+      
+      fc_i <- fc |> 
+        dplyr::filter(model_id == group$model_id, 
+                      reference_datetime == group$reference_datetime,
+                      site_id == group$site_id) |> 
+        dplyr::collect() # may as well...
+      
       crps_logs_score(fc_i, tg) |>
         arrow::write_dataset(s3_scores,
                              partitioning = c("model_id",
@@ -83,6 +89,13 @@ score_theme <- function(theme,
   }
   
  })
+  
+  ## hack to merge prov with any updates posted during run.
+  prov_download(s3_prov, "tmp.csv")
+  dplyr::bind_rows(readr::read_csv("tmp.csv", show_col_types = FALSE),
+                   readr::read_csv(local_prov, show_col_types = FALSE)) |>
+    dplyr::distinct() |>
+  readr::write_csv(local_prov)
   
   prov_upload(s3_prov, local_prov)
   timing
