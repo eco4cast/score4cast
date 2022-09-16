@@ -75,7 +75,7 @@ map_old_format <- function(df, filename=NULL) {
     }
 
     if (!"model_id" %in% colnames(df)) {
-      df <- df ||> mutate(model_id = gsub(pattern, "\\3", x))
+      df <- df |> mutate(model_id = gsub(pattern, "\\3", x))
     }
     
   }
