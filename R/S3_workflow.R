@@ -83,10 +83,6 @@ score_theme <- function(theme,
   timing
 }
 
-prov_id <- function(fc, target, group) {
- 
-  id
-} 
 
 
 get_target <- function(theme, s3) {

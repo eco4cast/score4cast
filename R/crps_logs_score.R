@@ -30,7 +30,7 @@ crps_logs_score <- function(forecast, target) {
         .groups = "drop") |>
       dplyr::mutate(
         mean = mean(dist),
-        median = median(dist),
+        median = stats::median(dist),
         sd = sqrt(distributional::variance(dist)),
         quantile97.5 = distributional::hilo(dist, 95)$upper,
         quantile02.5 = distributional::hilo(dist, 95)$lower,
