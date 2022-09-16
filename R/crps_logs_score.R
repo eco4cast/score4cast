@@ -13,10 +13,6 @@ crps_logs_score <- function(forecast, target) {
   target <- target |>
     dplyr::select("datetime", "site_id", "variable", "observed")
   
-  # Apply this earlier
-  # forecast <- map_old_format(forecast)
-  
-  
   joined <- forecast |> 
     dplyr::left_join(target, by = c("site_id", "datetime", "variable"))
   
@@ -34,7 +30,7 @@ crps_logs_score <- function(forecast, target) {
         .groups = "drop") |>
       dplyr::mutate(
         mean = mean(dist),
-        #median = median(dist),
+        median = median(dist),
         sd = sqrt(distributional::variance(dist)),
         quantile97.5 = distributional::hilo(dist, 95)$upper,
         quantile02.5 = distributional::hilo(dist, 95)$lower,

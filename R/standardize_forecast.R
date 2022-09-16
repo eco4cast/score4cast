@@ -1,25 +1,6 @@
 
 
-#' Transform older (v0.4) standard to current standard
 #' 
-#' @param df a forecast data.frame
-#' @param filename, optional.
-#' model_id and reference_datetime may be omitted if they are supplied in the
-#' filename.  If these columns exist, then filename is ignored.
-#' @details
-#' Current standard should have columns:
-#' - model_id
-#' - reference_datetime
-#' - site_id
-#' - variable
-#' - datetime
-#' - family
-#' - parameter
-#' - predicted
-#' 
-#' This function does not handle un-pivoted (v0.3) forecast, see pivot_forecast()
-#' 
-#' @export
 standardize_forecast <- function(df, filename=NULL) {
 
   if ("ensemble" %in% colnames(df)) {
@@ -107,7 +88,7 @@ standardize_forecast <- function(df, filename=NULL) {
   
   ## Some tick counts are predicted as integer (ensemble), but not always (parametric).
   ## for consistent typing, always treat this field as numeric
-  if(inherits(df$predicted, "integer")) {
+  if(is(df$predicted, "integer")) {
     df <- df |> mutate(predicted = as.numeric(predicted))
   }
 

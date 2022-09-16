@@ -4,23 +4,14 @@
 \alias{score}
 \title{Compute the CRPS & logs score of your forecast}
 \usage{
-score(
-  forecast,
-  target,
-  theme = c("aquatics", "beetles", "phenology", "terrestrial_30min",
-    "terrestrial_daily", "ticks"),
-  target_vars = TARGET_VARS
-)
+score(forecast, target, ...)
 }
 \arguments{
 \item{forecast}{forecast data frame or file}
 
 \item{target}{target path or URL (csv file)}
 
-\item{theme}{a theme name, an additional metadata field
-which is attached as an extra column if not available.  Serves as a forecast series identifier}
-
-\item{target_vars}{for 'wide' format, character vector of valid variable names}
+\item{...}{additional parameters (Not used)}
 }
 \description{
 Compute the CRPS & logs score of your forecast
