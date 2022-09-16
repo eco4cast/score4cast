@@ -79,10 +79,9 @@ score_theme <- function(theme,
   
  })
   
-  prov_download(s3_prov, local_prov)
+  prov_upload(s3_prov, local_prov)
   timing
 }
-
 
 
 get_target <- function(theme, s3) {
