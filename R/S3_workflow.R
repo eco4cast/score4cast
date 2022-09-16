@@ -46,26 +46,21 @@ score_theme <- function(theme,
     
     group <- grouping[i,]
     
-    ## 
-    tg <- target |>
-      filter(datetime >= lubridate::as_datetime(group$reference_datetime))
-    id <- rlang::hash(list(group$model_id, 
-                           group$reference_datetime,
-                           group$site_id,
-                           tg))
+    id <- prov_id(fc, target, group)
     if (!prov_has(id, prov_df)) {
+      
       score <- fc |> 
         dplyr::filter(model_id == group$model_id, 
                       reference_datetime == group$reference_datetime,
-                      site_id == group$site_id) |> 
+                      site_id == group$site_id)  |> 
         dplyr::collect() |> 
         crps_logs_score(target)
       
       arrow::write_dataset(score, s3_scores,
                     partitioning=c("model_id", "reference_datetime", "site_id"))
+      
       prov_add(id, local_prov)
     }
-    
   }
   
  })
@@ -74,7 +69,25 @@ score_theme <- function(theme,
   timing
 }
 
-
+prov_id <- function(fc, target, group) {
+  bounds <- fc |> 
+    dplyr::filter(model_id == group$model_id, 
+                  reference_datetime == group$reference_datetime,
+                  site_id == group$site_id) |>
+    dplyr::summarise(max = max(datetime),
+                     min = min(datetime)) |> 
+    dplyr::collect() 
+  
+  ## ID changes only if target has changed between dates
+  tg <- target |>
+    filter(datetime >= bounds$min,
+           datetime <= bounds$max)
+  id <- rlang::hash(list(group$model_id, 
+                         group$reference_datetime,
+                         group$site_id,
+                         tg))
+  id
+} 
 
 
 get_target <- function(theme, s3) {
