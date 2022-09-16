@@ -65,12 +65,27 @@ map_old_format <- function(df, filename=NULL) {
       "(\\w+)\\-(\\d{4}\\-\\d{2}\\-\\d{2})\\-(\\w+)\\.(csv)?(\\.gz)?(nc)?"
     x <- basename(filename)
     
-    df <- df %>% mutate(target_id = gsub(pattern, "\\1", x))
-    df <- df %>% mutate(reference_datetime =
-               lubridate::as_datetime(gsub(pattern, "\\2", x)))
-    df <- df %>% mutate(model_id = gsub(pattern, "\\3", x))
+    
+    #if (!"target_id" %in% colnames(df)) 
+    #  df <- df %>% mutate(target_id = gsub(pattern, "\\1", x))
+    
+    if (!"reference_datetime" %in% colnames(df)) {
+      df <- df |> mutate(reference_datetime =
+                            lubridate::as_datetime(gsub(pattern, "\\2", x)))
+    }
+
+    if (!"model_id" %in% colnames(df)) {
+      df <- df ||> mutate(model_id = gsub(pattern, "\\3", x))
+    }
     
   }
+  
+  ## Some tick counts are predicted as integer (ensemble), but not always (parametric).
+  ## for consistent typing, always treat this field as numeric
+  if(is(df$predicted, "integer")) {
+    df <- df |> mutate(predicted = as.numeric(predicted))
+  }
+  
   df
   
 }
