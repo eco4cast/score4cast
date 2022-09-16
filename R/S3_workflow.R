@@ -42,9 +42,14 @@ score_theme <- function(theme,
     dplyr::collect()
   n <- nrow(grouping)
   
+  pb <- progress::progress_bar$new(
+    format = glue::glue("  scoring {theme} [:bar] :percent in :elapsed,",
+                        " eta: :eta"),
+    total = n, 
+    clear = FALSE, width= 80)  
   for (i in 1:n) {  
 
-
+    pb$tick()
     group <- grouping[i,]
     fc_i <- fc |> 
       dplyr::filter(model_id == group$model_id, 
