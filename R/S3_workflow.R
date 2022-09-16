@@ -74,8 +74,7 @@ score_theme <- function(theme,
                                               "site_id"))
       prov_add(id, local_prov)
     }
-    
-    
+
   }
   
  })
