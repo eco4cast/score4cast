@@ -43,24 +43,39 @@ score_theme <- function(theme,
   n <- nrow(grouping)
   
   for (i in 1:n) {  
-    
+
+
     group <- grouping[i,]
+    fc_i <- fc |> 
+      dplyr::filter(model_id == group$model_id, 
+                    reference_datetime == group$reference_datetime,
+                    site_id == group$site_id) |> 
+      dplyr::collect() # may as well...
     
-    id <- prov_id(fc, target, group)
+    bounds <- fc_i |>
+      dplyr::summarise(max = max(datetime),
+                       min = min(datetime)) 
+    
+    tg <- target |>
+      filter(datetime >= bounds$min,
+             datetime <= bounds$max)
+
+    ## ID changes only if target has changed between dates for this group
+    id <- rlang::hash(list(group$model_id, 
+                           group$reference_datetime,
+                           group$site_id,
+                           tg))
+    
     if (!prov_has(id, prov_df)) {
-      
-      score <- fc |> 
-        dplyr::filter(model_id == group$model_id, 
-                      reference_datetime == group$reference_datetime,
-                      site_id == group$site_id)  |> 
-        dplyr::collect() |> 
-        crps_logs_score(target)
-      
-      arrow::write_dataset(score, s3_scores,
-                    partitioning=c("model_id", "reference_datetime", "site_id"))
-      
+      crps_logs_score(fc_i, tg) |>
+        arrow::write_dataset(s3_scores,
+                             partitioning = c("model_id",
+                                              "reference_datetime",
+                                              "site_id"))
       prov_add(id, local_prov)
     }
+    
+    
   }
   
  })
@@ -70,22 +85,7 @@ score_theme <- function(theme,
 }
 
 prov_id <- function(fc, target, group) {
-  bounds <- fc |> 
-    dplyr::filter(model_id == group$model_id, 
-                  reference_datetime == group$reference_datetime,
-                  site_id == group$site_id) |>
-    dplyr::summarise(max = max(datetime),
-                     min = min(datetime)) |> 
-    dplyr::collect() 
-  
-  ## ID changes only if target has changed between dates
-  tg <- target |>
-    filter(datetime >= bounds$min,
-           datetime <= bounds$max)
-  id <- rlang::hash(list(group$model_id, 
-                         group$reference_datetime,
-                         group$site_id,
-                         tg))
+ 
   id
 } 
 
