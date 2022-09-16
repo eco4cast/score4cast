@@ -59,15 +59,17 @@ map_old_format <- function(df, filename=NULL) {
     df <- df |> select(-filename)
   }
   
+  ## Only add these if not present
   if(!is.null(filename)) {
     pattern <- 
       "(\\w+)\\-(\\d{4}\\-\\d{2}\\-\\d{2})\\-(\\w+)\\.(csv)?(\\.gz)?(nc)?"
     x <- basename(filename)
-    df <- df %>% 
-      mutate(target_id = gsub(pattern, "\\1", x),
-             reference_datetime =
-               lubridate::as_datetime(gsub(pattern, "\\2", x)),
-             model_id = gsub(pattern, "\\3", x))
+    
+    df <- df %>% mutate(target_id = gsub(pattern, "\\1", x))
+    df <- df %>% mutate(reference_datetime =
+               lubridate::as_datetime(gsub(pattern, "\\2", x)))
+    df <- df %>% mutate(model_id = gsub(pattern, "\\3", x))
+    
   }
   df
   

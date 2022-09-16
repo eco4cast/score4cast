@@ -47,12 +47,13 @@ score_theme <- function(theme,
     group <- grouping[i,]
     
     ## 
-    tg <- target |> filter(time >= group$reference_datetime)
+    tg <- target |>
+      filter(datetime >= lubridate::as_datetime(group$reference_datetime))
     id <- rlang::hash(list(group$model_id, 
                            group$reference_datetime,
                            group$site_id,
                            tg))
-    if (!prov_has(id, local_prov)) {
+    if (!prov_has(id, prov_df)) {
       score <- fc |> 
         dplyr::filter(model_id == group$model_id, 
                       reference_datetime == group$reference_datetime,
@@ -62,7 +63,7 @@ score_theme <- function(theme,
       
       arrow::write_dataset(score, s3_scores,
                     partitioning=c("model_id", "reference_datetime", "site_id"))
-      prov_add(id, prov_df)
+      prov_add(id, local_prov)
     }
     
   }
