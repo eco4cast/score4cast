@@ -56,9 +56,6 @@ score_theme <- function(theme,
 
     ref <- lubridate::as_date(group$reference_datetime)
     bounds <- list(min = ref, max = ref + max_horizon)
-      # fc_i |>
-      # dplyr::summarise(max = max(datetime),
-      #                  min = min(datetime)) 
     
     tg <- target |>
       filter(datetime >= bounds$min,
@@ -72,11 +69,13 @@ score_theme <- function(theme,
     
     if (!prov_has(id, prov_df)) {
       
+    ## Forecast data (parquet content) is only read if it needs be scored
+    ## otherwise we can skip after only looking at forecast file names (partitions).
       fc_i <- fc |> 
         dplyr::filter(model_id == group$model_id, 
                       reference_datetime == group$reference_datetime,
                       site_id == group$site_id) |> 
-        dplyr::collect() # may as well...
+        dplyr::collect()
       
       crps_logs_score(fc_i, tg) |>
         arrow::write_dataset(s3_scores,
@@ -90,13 +89,14 @@ score_theme <- function(theme,
   
  })
   
-  ## hack to merge prov with any updates posted during run.
+  ## hack to merge prov with any updates to prov posted while we were running.
   prov_download(s3_prov, "tmp.csv")
   dplyr::bind_rows(readr::read_csv("tmp.csv", show_col_types = FALSE),
                    readr::read_csv(local_prov, show_col_types = FALSE)) |>
     dplyr::distinct() |>
   readr::write_csv(local_prov)
   
+  ## now sync prov back to S3
   prov_upload(s3_prov, local_prov)
   timing
 }
@@ -111,10 +111,7 @@ get_target <- function(theme, s3) {
 
 
 
-
-
-
-
+## FIXME prov_has / prov_add could ideally read from & append to the *remote* S3 source.
 
 prov_has <- function(id, prov) {
   ## would be fast even with remote file
