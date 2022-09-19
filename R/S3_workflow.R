@@ -32,6 +32,7 @@ score_theme <- function(theme,
   prov_download(s3_prov, local_prov)
   prov_df <- readr::read_csv(local_prov, show_col_types = FALSE)
   
+  s3_scores_path <- s3_scores$path(glue::glue("parquet/{theme}"))
   
   timing <- bench::bench_time({
     
@@ -78,7 +79,7 @@ score_theme <- function(theme,
         dplyr::collect()
       
       crps_logs_score(fc_i, tg) |>
-        arrow::write_dataset(s3_scores,
+        arrow::write_dataset(s3_scores_path,
                              partitioning = c("model_id",
                                               "reference_datetime",
                                               "site_id"))
