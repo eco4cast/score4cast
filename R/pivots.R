@@ -1,11 +1,5 @@
 
-# FIXME pivot only if `variable` column not present
-# (i.e. so scoring works with new standard long-form)
-# FIXME rename `target` column to `variable`
-
-# standardizes format, 
-# pivots to long form
-# deduplicates predictions
+# Deprecated Legacy support for unpivoted forecasts, v0.3
 
 #' pivot target
 #' 
@@ -51,7 +45,86 @@ pivot_forecast <- function(df, target_vars=""){
 }
 
 
+## deprecated support for un-pivoted forecasts, standards version 0.3
+standardize_format <- function(df, target_vars) {
+  
+  
+  renamer <- function(x) {
+    vapply(x,
+           function(n)
+             switch(
+               n,
+               "start_time" = "reference_datetime",
+               "time" = "datetime",
+               "target" = "variable",
+               "siteID" = "site_id",
+               "site"   = "site_id",
+               "theme"  = "target_id",
+               "team"   = "model_id",
+               "forecast_start_time" = "reference_datetime",
+               "issue_date" = "pub_time",
+               "Amblyomma americanum" = "amblyomma_americanum",
+               n
+             ),
+           "", USE.NAMES = FALSE)
+  }
+  df <- dplyr::rename_with(df,renamer)
+  
+  
+  column_names <- c("target_id",
+                    "model_id", 
+                    "reference_datetime",
+                    "site_id", 
+                    "datetime",
+                    "variable",
+                    "family", 
+                    "parameter",
+                    "predicted",
+                    "observed",
+                    ## And deprecated names
+                    "ensemble",
+                    "statistic",
+                    "mean",
+                    "sd"
+                    )
+  
+  
+  #GENERALIZATION:  This is a theme specific hack. How do we generalize?
+  ## Put tick + beetles dates to ISOweek
+  if ("target_id" %in% colnames(df) && 
+      all(pull(df,target_id) %in% c("ticks", "beetles"))
+  ) {
+    df <- df %>% 
+      mutate(datetime = isoweek(datetime))
+  }
+  
+  # drop non-standard columns
+  df %>% 
+    dplyr::select(tidyselect::any_of(column_names)) %>%
+    enforce_schema()
+}
 
-globalVariables(c("statistic"), package="score4cast")
+enforce_schema <- function(df) {
+  df %>% 
+    mutate(across(any_of(c("datetime", "reference_datetime")),
+                  .fns = as.POSIXct)) %>%
+    mutate(predicted = as.numeric(predicted),
+           parameter = as.character(parameter))
+}
+
+
+## utils 
+isoweek <- function(datetime) { # Note: ISOweek calls not duckdb-compatible
+  ISOweek::ISOweek2date(paste0(ISOweek::ISOweek(datetime), "-","1"))
+}
+na_rm <- function(x) as.numeric(stats::na.exclude(x))
+
+
+
+globalVariables(c("target_id", "datetime", "predicted", "parameter",
+                  "statistic"),
+                package="score4cast")
+
+
 
 

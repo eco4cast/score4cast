@@ -27,7 +27,10 @@ infer_dist <- function(family, parameter, predicted) {
                 as.list(predicted)
   )
   fn <- eval(rlang::parse_expr(paste0("distributional::dist_", fam)))
-  dist <- do.call(fn, arg)
+  dist <- tryCatch(
+    do.call(fn, arg),
+    error = function(e) distributional::dist_missing(length(arg)),
+    finally = distributional::dist_missing(length(arg)))
   dist
 }
 

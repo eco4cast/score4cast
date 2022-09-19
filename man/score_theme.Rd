@@ -10,7 +10,7 @@ score_theme(
   s3_targets,
   s3_scores,
   s3_prov,
-  after = as.Date("2022-01-01"),
+  max_horizon = 365L,
   local_prov = "scoring_provenance.csv"
 )
 }
@@ -26,7 +26,9 @@ This connection requires write access, e.g. by specifying}
 
 \item{s3_prov}{a connection from \link[arrow:s3_bucket]{arrow::s3_bucket}}
 
-\item{after}{a date by which to filter out older forecasts from (re)-scoring}
+\item{max_horizon}{days after the reference_date that a given forecast should cover.
+Can exceed the actual max horizon. Allows us to avoid re-scoring old forecasts when
+targets are updated with future values but leave old values unchanged.}
 
 \item{local_prov}{path to local csv file which will be used to
 store provenance until theme is finished scoring.}

@@ -1,4 +1,27 @@
-map_old_format <- function(df, filename=NULL) {
+
+
+#' Transform older (v0.4) standard to current standard
+#' 
+#' @param df a forecast data.frame
+#' @param filename, optional.
+#' model_id and reference_datetime may be omitted if they are supplied in the
+#' filename.  If these columns exist, then filename is ignored.
+#' @details
+#' Current standard should have columns:
+#' - model_id
+#' - reference_datetime
+#' - site_id
+#' - variable
+#' - datetime
+#' - family
+#' - parameter
+#' - predicted
+#' 
+#' This function does not handle un-pivoted (v0.3) forecast, see pivot_forecast()
+#' 
+#' @export
+standardize_forecast <- function(df, filename=NULL) {
+
   if ("ensemble" %in% colnames(df)) {
     df <- df |>
       dplyr::mutate(family = "sample") |> 
@@ -34,6 +57,8 @@ map_old_format <- function(df, filename=NULL) {
     )
   }
 
+  
+  
   ##
   if ("pub_time" %in% colnames(df) && ! "reference_datetime" %in% colnames(df)) {
     df <- df |> rename(reference_datetime = pub_time)
@@ -59,16 +84,45 @@ map_old_format <- function(df, filename=NULL) {
     df <- df |> select(-filename)
   }
   
+  ## Only add these if not present
   if(!is.null(filename)) {
     pattern <- 
       "(\\w+)\\-(\\d{4}\\-\\d{2}\\-\\d{2})\\-(\\w+)\\.(csv)?(\\.gz)?(nc)?"
     x <- basename(filename)
-    df <- df %>% 
-      mutate(target_id = gsub(pattern, "\\1", x),
-             reference_datetime =
-               lubridate::as_datetime(gsub(pattern, "\\2", x)),
-             model_id = gsub(pattern, "\\3", x))
+    
+    
+    #if (!"target_id" %in% colnames(df)) 
+    #  df <- df %>% mutate(target_id = gsub(pattern, "\\1", x))
+    
+    if (!"reference_datetime" %in% colnames(df)) {
+      df <- df |> mutate(reference_datetime =
+                            lubridate::as_datetime(gsub(pattern, "\\2", x)))
+    }
+
+    if (!"model_id" %in% colnames(df)) {
+      df <- df |> mutate(model_id = gsub(pattern, "\\3", x))
+    }
+    
   }
+  
+  ## Some tick counts are predicted as integer (ensemble), but not always (parametric).
+  ## for consistent typing, always treat this field as numeric
+  if(inherits(df$predicted, "integer")) {
+    df <- df |> mutate(predicted = as.numeric(predicted))
+  }
+
+  ## ensemble number should not be an integer/factor,
+  ## as that conflicts with parametric parameter names
+  df <- df |> mutate(parameter = as.character(parameter))
+  
+  ## Enforce ISO vars for ticks or beetles vars
+  ## (Assumes `df` doesn't include forecasts from different themes!)
+  iso_vars <- c("abundance", "richness", "amblyomma_americanum")
+  if ( nrow( dplyr::filter(df, variable %in%  iso_vars ) ) > 0 ) {
+    df <- df |> mutate(datetime = isoweek(datetime))
+  }
+  
+    
   df
   
 }

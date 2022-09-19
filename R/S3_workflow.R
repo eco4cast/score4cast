@@ -15,7 +15,9 @@
 #' This connection requires write access, e.g. by specifying 
 #  AWS_ACCESS_KEY_ID & AWS_SECRET_ACCESS_KEY env vars.
 #' @param s3_prov a connection from [arrow::s3_bucket]
-#' @param after a date by which to filter out older forecasts from (re)-scoring
+#' @param max_horizon days after the reference_date that a given forecast should cover.
+#' Can exceed the actual max horizon. Allows us to avoid re-scoring old forecasts when
+#' targets are updated with future values but leave old values unchanged.
 #' @param local_prov path to local csv file which will be used to 
 #' store provenance until theme is finished scoring.
 #' @export
@@ -23,137 +25,103 @@ score_theme <- function(theme,
                         s3_forecasts, 
                         s3_targets, 
                         s3_scores, 
-                        s3_prov, 
-                        after = as.Date("2022-01-01"),
+                        s3_prov,
+                        max_horizon = 365L,
                         local_prov = "scoring_provenance.csv"){
   
   prov_download(s3_prov, local_prov)
   prov_df <- readr::read_csv(local_prov, show_col_types = FALSE)
   
-  options("readr.show_progress"=FALSE)
+  
+  timing <- bench::bench_time({
+    
   target <- get_target(theme, s3_targets)
-  
-  ## get all forecasts
-  forecasts <- s3_forecasts$ls(theme)
-  not_meta <- stringr::str_detect(forecasts,"[.]xml", negate=TRUE)
-  not_prov <- stringr::str_detect(forecasts,"prov\\.", negate=TRUE)
-  forecasts <- forecasts[not_meta & not_prov]
-  
-  if(!is.null(after)){
-    fcs <- basename(forecasts)
-    dates <- stringr::str_extract(fcs, "\\d{4}-\\d{2}-\\d{2}")
-    dates <- as.Date(dates)
-    forecasts <- forecasts[dates >= after]
-  }
+  fc <- arrow::open_dataset(s3_forecasts$path(glue::glue("parquet/{theme}"))) 
+
+  ## We will score in group chunks (model/date/site) to save RAM
+  grouping <- fc |> 
+    dplyr::distinct(model_id, reference_datetime, site_id) |>
+    dplyr::collect()
+  n <- nrow(grouping)
   
   pb <- progress::progress_bar$new(
     format = glue::glue("  scoring {theme} [:bar] :percent in :elapsed,",
                         " eta: :eta"),
-    total = length(forecasts), 
-    clear = FALSE, width= 80)
+    total = n, 
+    clear = FALSE, width= 80)  
+  for (i in 1:n) {  
 
-  errors <- forecasts %>% 
-      purrr::map(function(x) {
-        pb$tick()
-        score_safely(x, 
-                     target = target, 
-                     local_prov = local_prov,
-                     prov_df = prov_df,
-                     s3_scores = s3_scores, 
-                     s3_forecasts = s3_forecasts)
-      })
-  ## Sync prov
-  prov_upload(s3_prov = s3_prov, local_prov = local_prov)
     
-  ## warn about errors (e.g. curl upload failures)
-  warnings <- unique(purrr::compact(purrr::map(errors, ~ .x$error$message)))
-  purrr::map(warnings, warning, call.=FALSE)
-  ## message and timing
-  options("readr.show_progress"=NULL)
-  unscored <- purrr::map_lgl(purrr::map(errors, "result"),is.null)
-  error <- purrr::map(errors[unscored], "error")
-  invisible(list(urls = forecasts[unscored], error = error))
-}
+    group <- grouping[i,]
 
-## Optional once forecasts and targets files use long variable format
-TARGET_VARS <- c("oxygen", 
-                 "temperature", "chla", "richness", "abundance", "nee", "le", "vswc", 
-                 "gcc_90", "rcc_90", "ixodes_scapularis", "amblyomma_americanum",
-                 "Amblyomma americanum")
+    ref <- lubridate::as_date(group$reference_datetime)
+    bounds <- list(min = ref, max = ref + max_horizon)
+    
+    tg <- target |>
+      filter(datetime >= bounds$min,
+             datetime <= bounds$max)
+
+    ## ID changes only if target has changed between dates for this group
+    id <- rlang::hash(list(group$model_id, 
+                           group$reference_datetime,
+                           group$site_id,
+                           tg))
+    
+    if (!prov_has(id, prov_df)) {
+      
+    ## Forecast data (parquet content) is only read if it needs be scored
+    ## otherwise we can skip after only looking at forecast file names (partitions).
+      fc_i <- fc |> 
+        dplyr::filter(model_id == group$model_id, 
+                      reference_datetime == group$reference_datetime,
+                      site_id == group$site_id) |> 
+        dplyr::collect()
+      
+      crps_logs_score(fc_i, tg) |>
+        arrow::write_dataset(s3_scores,
+                             partitioning = c("model_id",
+                                              "reference_datetime",
+                                              "site_id"))
+      prov_add(id, local_prov)
+    }
+
+  }
+  
+ })
+  
+  ## hack to merge prov with any updates to prov posted while we were running.
+  prov_download(s3_prov, "tmp.csv")
+  dplyr::bind_rows(readr::read_csv("tmp.csv", show_col_types = FALSE),
+                   readr::read_csv(local_prov, show_col_types = FALSE)) |>
+    dplyr::distinct() |>
+  readr::write_csv(local_prov)
+  
+  ## now sync prov back to S3
+  prov_upload(s3_prov, local_prov)
+  timing
+}
 
 
 get_target <- function(theme, s3) {
+  options("readr.show_progress"=FALSE)
   key <- glue::glue("{theme}/{theme}-targets.csv.gz")
-  read4cast::read_forecast(key, s3 = s3) %>%
-    mutate(target_id = theme) %>%
-    pivot_target(TARGET_VARS)
+  read4cast::read_forecast(key, s3 = s3)
 }
 
 
-# A relatively generic scoring function which
-# takes a pivoted targets but un-pivoted forecast
-# if pivot_* fns were smart they could conditionally pivot
-score_it <- function(forecast_df, target_df) {
-  
-  suppressMessages({ # don't show "joining by" msg
-  forecast_df %>%
-    pivot_forecast(TARGET_VARS) %>%
-    crps_logs_score(target_df) %>%
-    include_horizon()
-  })
+
+
+## FIXME prov_has / prov_add could ideally read from & append to the *remote* S3 source.
+
+prov_has <- function(id, prov) {
+  ## would be fast even with remote file
+  prov |> dplyr::filter(prov == id) |> nrow() >= 1
 }
 
-# Read a forecast file + target file and score them conditionally on prov
-score_if <- function(forecast_file, 
-                     target, 
-                     local_prov,
-                     prov_df,
-                     s3_scores,
-                     s3_forecasts,
-                     score_file = score_dest(forecast_file, 
-                                             s3_scores,
-                                             "parquet")
-) {
-  
-  suppressMessages({ ## no message about 'new columns'
-    forecast_df <- 
-      read4cast::read_forecast(forecast_file, s3 = s3_forecasts) %>% 
-      map_old_format() %>% 
-      mutate(filename = basename(forecast_file))
-  })
-  target_df <- subset_target(forecast_df, target)
-  id <- rlang::hash(list(forecast_df, target_df))
-  # score only unique combinations of subset of targets + forecast
-  if (!prov_has(id, prov_df)) {
-    score_it(forecast_df, target_df) %>%
-      arrow::write_parquet(score_file)
-  }
-  prov_add(id, local_prov)
-  invisible(id)
+prov_add <- function(id, local_prov = "scoring_provenance.csv") {
+  new_prov <-  dplyr::tibble(prov=id)
+  readr::write_csv(new_prov, local_prov, append=TRUE)
 }
-
-## we care if there are any errors
-score_safely <- purrr::safely(score_if)
-
-
-# "target" can be a pointer to S3 bucket
-# works with local or target data.frame too
-subset_target <- function(forecast_df, target) {
-  range <- forecast_df %>% 
-    summarise(start = min(datetime),
-              end=max(datetime))
-  start <- lubridate::as_datetime(range$start[[1]])
-  end <- lubridate::as_datetime(range$end[[1]])
-  year <- lubridate::year(start)
-  target %>%
-    filter(
-      #year >= {{year}}, # potential speed up, but arrow bug...
-      datetime >= {{start}}, 
-      datetime <= {{end}}) %>%
-    dplyr::collect()
-}
-
-
 
 prov_download <- function(s3_prov, local_prov = "scoring_provenance.csv") {
   if(!"scoring_provenance.csv" %in% s3_prov$ls() ) {
@@ -170,32 +138,5 @@ prov_upload <- function(s3_prov, local_prov = "scoring_provenance.csv") {
   path <- s3_prov$path("scoring_provenance.csv")
   prov <- arrow::write_csv_arrow(prov, path)
 }
-
-
-## ARGH "Not possible to append efficiently to S3 objects"
-## ARGH using S3 names as index is very slow!!
-## Write local file and sync it is best :-(
-## A poor man's index: says only if id has been seen before
-prov_has <- function(id, prov) {
-  ## would be fast even with remote file
-  prov |> dplyr::filter(prov == id) |> nrow() >= 1
-}
-prov_add <- function(id, local_prov = "scoring_provenance.csv") {
-  new_prov <-  dplyr::tibble(prov=id)
-  readr::write_csv(new_prov, local_prov, append=TRUE)
-}
-## Note, we can still access timestamp on prov, and purge older than etc
-
-score_dest <- function(forecast_file, s3_scores, type="parquet"){ 
-  out <- tools::file_path_sans_ext(basename(forecast_file), compression = TRUE)
-  target_id <- strsplit(out, "-")[[1]][[1]]
-  year <-  strsplit(out, "-")[[1]][[2]]
-  path <- paste(type, target_id, year, paste0(out, ".", type), sep="/")
-  
-  s3_scores$path(path)
-}
-
-
-
 
 

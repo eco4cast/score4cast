@@ -4,3 +4,4 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 to-do.md
+scoring_provenance.csv
