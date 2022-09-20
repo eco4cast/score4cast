@@ -32,7 +32,7 @@ score_theme <- function(theme,
   prov_download(s3_prov, local_prov)
   prov_df <- readr::read_csv(local_prov, show_col_types = FALSE)
   
-  s3_scores_path <- s3_scores$path(glue::glue("parquet/{theme}"))
+  s3_scores_path <- s3_scores$path(glue::glue("parquet/{theme}", theme=theme))
   
   timing <- bench::bench_time({
     
@@ -40,6 +40,8 @@ score_theme <- function(theme,
   fc <- arrow::open_dataset(s3_forecasts$path(glue::glue("parquet/{theme}"))) 
 
   ## We will score in group chunks (model/date/site) to save RAM
+  ## Computing group list can be pretty slow when many files are involved!
+  ## does not seem to be leveraging partition names!
   grouping <- fc |> 
     dplyr::distinct(model_id, reference_datetime, site_id) |>
     dplyr::collect()
@@ -52,7 +54,7 @@ score_theme <- function(theme,
     clear = FALSE, width= 80)  
   for (i in 1:n) {  
 
-    
+    pb$tick()
     group <- grouping[i,]
 
     ref <- lubridate::as_date(group$reference_datetime)
@@ -91,11 +93,11 @@ score_theme <- function(theme,
  })
   
   ## hack to merge prov with any updates to prov posted while we were running.
-  prov_download(s3_prov, "tmp.csv")
-  dplyr::bind_rows(readr::read_csv("tmp.csv", show_col_types = FALSE),
-                   readr::read_csv(local_prov, show_col_types = FALSE)) |>
-    dplyr::distinct() |>
-  readr::write_csv(local_prov)
+  #prov_download(s3_prov, "tmp.csv")
+  #dplyr::bind_rows(readr::read_csv("tmp.csv", show_col_types = FALSE),
+  #                 readr::read_csv(local_prov, show_col_types = FALSE)) |>
+  #  dplyr::distinct() |>
+  #readr::write_csv(local_prov)
   
   ## now sync prov back to S3
   prov_upload(s3_prov, local_prov)
@@ -121,17 +123,21 @@ prov_has <- function(id, prov) {
 
 prov_add <- function(id, local_prov = "scoring_provenance.csv") {
   new_prov <-  dplyr::tibble(prov=id)
+  
+  ## Cannot append w/o using low-level interface
+  #arrow::write_csv_arrow(new_prov, s3_prov$path(local_prov), append=TRUE)
+  
   readr::write_csv(new_prov, local_prov, append=TRUE)
 }
 
 prov_download <- function(s3_prov, local_prov = "scoring_provenance.csv") {
-  if(!"scoring_provenance.csv" %in% s3_prov$ls() ) {
-    arrow::write_csv_arrow(dplyr::tibble(prov=NA),"scoring_provenance.csv")
+  if(! (local_prov %in% s3_prov$ls()) ) {
+    arrow::write_csv_arrow(dplyr::tibble(prov=NA), local_prov)
     return(NULL)
   }
   path <- s3_prov$path("scoring_provenance.csv")
   prov <- arrow::read_csv_arrow(path)
-  arrow::write_csv_arrow(prov, local_prov)
+  prov
 }
 
 prov_upload <- function(s3_prov, local_prov = "scoring_provenance.csv") {
