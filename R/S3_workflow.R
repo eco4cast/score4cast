@@ -135,14 +135,14 @@ prov_download <- function(s3_prov, local_prov = "scoring_provenance.csv") {
     arrow::write_csv_arrow(dplyr::tibble(prov=NA), local_prov)
     return(NULL)
   }
-  path <- s3_prov$path("scoring_provenance.csv")
+  path <- s3_prov$path(local_prov)
   prov <- arrow::read_csv_arrow(path)
   prov
 }
 
 prov_upload <- function(s3_prov, local_prov = "scoring_provenance.csv") {
   prov <- arrow::open_dataset(local_prov, format="csv")
-  path <- s3_prov$path("scoring_provenance.csv")
+  path <- s3_prov$path(local_prov)
   prov <- arrow::write_csv_arrow(prov, path)
 }
 
