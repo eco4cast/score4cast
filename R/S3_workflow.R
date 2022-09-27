@@ -139,7 +139,8 @@ prov_download <- function(s3_prov, local_prov = "scoring_provenance.csv") {
   }
   path <- s3_prov$path(local_prov)
   prov <- arrow::read_csv_arrow(path)
-  prov
+  arrow::write_csv_arrow(prov, local_prov)
+  invisible(local_prov)
 }
 
 prov_upload <- function(s3_prov, local_prov = "scoring_provenance.csv") {
