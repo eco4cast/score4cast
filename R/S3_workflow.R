@@ -31,6 +31,8 @@ score_theme <- function(theme,
   
   prov_download(s3_prov, local_prov)
   prov_df <- readr::read_csv(local_prov, show_col_types = FALSE)
+  on.exit(prov_upload(s3_prov, local_prov))
+  
   
   s3_scores_path <- s3_scores$path(glue::glue("parquet/{theme}", theme=theme))
   
