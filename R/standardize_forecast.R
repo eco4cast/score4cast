@@ -95,8 +95,7 @@ standardize_forecast <- function(df, filename=NULL) {
     #  df <- df %>% mutate(target_id = gsub(pattern, "\\1", x))
     
     if (!"reference_datetime" %in% colnames(df)) {
-      df <- df |> mutate(reference_datetime =
-                            lubridate::as_datetime(gsub(pattern, "\\2", x)))
+      df <- mutate(df, reference_datetime = gsub(pattern,"\\2", x))
     }
 
     if (!"model_id" %in% colnames(df)) {
