@@ -121,6 +121,10 @@ standardize_forecast <- function(df, filename=NULL) {
     df <- df |> mutate(datetime = isoweek(datetime))
   }
   
+  original <- getOption("digits.sec")
+  options("digits.secs"=0)
+  df <- df |> mutate(reference_datetime = as.character(reference_datetime))
+  options("digits.secs"=original)
     
   df
   
