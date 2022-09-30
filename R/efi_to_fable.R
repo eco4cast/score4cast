@@ -46,7 +46,7 @@ globalVariables(c("model_id", "reference_datetime",
 
 
 
-# obs <- fc |> as_tsibble() |> select(-prediction) |> rename(prediction = observed)
+# obs <- fc |> as_tsibble() |> select(-prediction) |> rename(prediction = observation)
 # fc |> accuracy(obs, measures = lst(CRPS, log_score), by = c("model_id", "site_id", "reference_datetime", "datetime", "variable"))
 # 
 # fc |> accuracy(obs)
@@ -69,7 +69,7 @@ log_score <- function(.dist, .actual, ...) {
 }
 
 # This works
-# obs <- fc |> as_tsibble() |> select(-prediction) |> rename(prediction = observed)
+# obs <- fc |> as_tsibble() |> select(-prediction) |> rename(prediction = observation)
 # fc |> accuracy(obs)
 
 

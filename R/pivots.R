@@ -13,9 +13,9 @@ pivot_target <- function(df, target_vars = NULL){
     df <- df %>% 
     tidyr::pivot_longer(tidyselect::any_of(target_vars), 
                         names_to = "variable", 
-                        values_to = "observed")
+                        values_to = "observation")
   }
-  df %>% filter(!is.na(observed))
+  df %>% filter(!is.na(observation))
 }
 
 #' pivot forecast
@@ -80,7 +80,7 @@ standardize_format <- function(df, target_vars) {
                     "family", 
                     "parameter",
                     "prediction",
-                    "observed",
+                    "observation",
                     ## And deprecated names
                     "ensemble",
                     "statistic",
@@ -96,6 +96,10 @@ standardize_format <- function(df, target_vars) {
   ) {
     df <- df %>% 
       mutate(datetime = isoweek(datetime))
+  }
+  
+  if (!"observed" %in% colnames(df)) {
+    df <- df |> rename(observation = observed)
   }
   
   # drop non-standard columns

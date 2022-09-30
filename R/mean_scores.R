@@ -28,7 +28,7 @@
 #' @importFrom dplyr left_join pull
 #' @export
 fill_scores <- function(df, null_model = "EFInull") {
-  df <- df %>% filter(!is.na(observed)) %>% collect()
+  df <- df %>% filter(!is.na(observation)) %>% collect()
   
   team <- distinct(df,model_id)
   if (is.na(null_model)) {
