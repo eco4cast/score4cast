@@ -11,7 +11,8 @@
 crps_logs_score <- function(forecast, target) {
   
   target <- target |>
-    dplyr::select("datetime", "site_id", "variable", "observed")
+    standardize_target() |> 
+    dplyr::select("datetime", "site_id", "variable", "observation")
   
   joined <- forecast |> 
     dplyr::left_join(target, by = c("site_id", "datetime", "variable"))
@@ -23,10 +24,10 @@ crps_logs_score <- function(forecast, target) {
   scores <- joined |> 
       dplyr::group_by(dplyr::across(dplyr::any_of(grouping))) |> 
       dplyr::summarise(
-        observed = unique(observed), # grouping vars define a unique obs
-        crps = generic_crps(family, parameter, predicted, observed),
-        logs = generic_logs(family, parameter, predicted, observed),
-        dist = infer_dist(family, parameter, predicted),
+        observation = unique(observation), # grouping vars define a unique obs
+        crps = generic_crps(family, parameter, prediction, observation),
+        logs = generic_logs(family, parameter, prediction, observation),
+        dist = infer_dist(family, parameter, prediction),
         .groups = "drop") |>
       dplyr::mutate(
         mean = mean(dist),
@@ -47,39 +48,39 @@ crps_logs_score <- function(forecast, target) {
 
 
 
-generic_crps <- function(family, parameter, predicted, observed){
-  names(predicted) = parameter
-  y <- dplyr::first(observed)
+generic_crps <- function(family, parameter, prediction, observation){
+  names(prediction) = parameter
+  y <- dplyr::first(observation)
   tryCatch(
   switch(unique(family),
-         lognormal = scoringRules::crps_lnorm(y, predicted['mu'], predicted['sigma']),
-         normal = scoringRules::crps_norm(y, predicted['mu'], predicted['sigma']),
-         sample = scoringRules::crps_sample(y, predicted)
+         lognormal = scoringRules::crps_lnorm(y, prediction['mu'], prediction['sigma']),
+         normal = scoringRules::crps_norm(y, prediction['mu'], prediction['sigma']),
+         sample = scoringRules::crps_sample(y, prediction)
   ),
   error = function(e) NA_real_, finally = NA_real_)
 }
 
 
-generic_logs <- function(family, parameter, predicted, observed){
-  names(predicted) = parameter
-  y <- dplyr::first(observed)
+generic_logs <- function(family, parameter, prediction, observation){
+  names(prediction) = parameter
+  y <- dplyr::first(observation)
   tryCatch(
     switch(unique(family),
-           lognormal = scoringRules::logs_lnorm(y, predicted['mu'], predicted['sigma']),
-           normal = scoringRules::logs_norm(y, predicted['mu'], predicted['sigma']),
-           sample = scoringRules::logs_sample(y, predicted)
+           lognormal = scoringRules::logs_lnorm(y, prediction['mu'], prediction['sigma']),
+           normal = scoringRules::logs_norm(y, prediction['mu'], prediction['sigma']),
+           sample = scoringRules::logs_sample(y, prediction)
     ),
     error = function(e) NA_real_, finally = NA_real_)
 }
 
 # scoringRules already has a generic crps() method that covers all cases except crps_sample.
 # if we used those conventions, we could get all parameters for free as:
-# args <- c(list(y = dplyr::first(observed), family = family), as.list(predicted))
+# args <- c(list(y = dplyr::first(observation), family = family), as.list(prediction))
 # do.call(logs, args)
 
 
 
-globalVariables(c("family", "parameter", "predicted", "observed", "dist"),
+globalVariables(c("family", "parameter", "prediction", "observation", "dist"),
                 package="score4cast")
 
 

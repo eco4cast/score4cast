@@ -31,14 +31,14 @@ pivot_forecast <- function(df, target_vars=""){
     df <- df %>% 
       tidyr::pivot_longer(tidyselect::any_of(target_vars), 
                           names_to = "variable", 
-                          values_to = "predicted")
+                          values_to = "prediction")
   }
   df <- deduplicate_predictions(df)
   
   if("statistic" %in% colnames(df)){
     df <- df %>% 
       tidyr::pivot_wider(names_from = statistic,
-                         values_from = predicted)
+                         values_from = prediction)
   }
   
   df
@@ -79,7 +79,7 @@ standardize_format <- function(df, target_vars) {
                     "variable",
                     "family", 
                     "parameter",
-                    "predicted",
+                    "prediction",
                     "observed",
                     ## And deprecated names
                     "ensemble",
@@ -108,7 +108,7 @@ enforce_schema <- function(df) {
   df %>% 
     mutate(across(any_of(c("datetime", "reference_datetime")),
                   .fns = as.POSIXct)) %>%
-    mutate(predicted = as.numeric(predicted),
+    mutate(prediction = as.numeric(prediction),
            parameter = as.character(parameter))
 }
 
@@ -121,7 +121,7 @@ na_rm <- function(x) as.numeric(stats::na.exclude(x))
 
 
 
-globalVariables(c("target_id", "datetime", "predicted", "parameter",
+globalVariables(c("target_id", "datetime", "prediction", "parameter",
                   "statistic"),
                 package="score4cast")
 

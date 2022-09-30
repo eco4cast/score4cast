@@ -3,12 +3,12 @@ efi_to_fable <- function(df) {
   key <- c("model_id", "reference_datetime", "site_id", "variable") 
   tb <- df |> 
     group_by(model_id, reference_datetime, site_id, datetime, variable, family) |> 
-    summarise(predicted = infer_dist(family, parameter, predicted),
+    summarise(prediction = infer_dist(family, parameter, prediction),
               .groups = "drop")
   
   fc <- tb  |> 
-    fabletools::as_fable(response = "predicted", 
-                         distribution = predicted, 
+    fabletools::as_fable(response = "prediction", 
+                         distribution = prediction, 
                          index = datetime,
                          key = dplyr::any_of(key))               
   
@@ -17,14 +17,14 @@ efi_to_fable <- function(df) {
 
 
 ## then we can use distributional:: functions
-infer_dist <- function(family, parameter, predicted) {
-  names(predicted) = parameter
+infer_dist <- function(family, parameter, prediction) {
+  names(prediction) = parameter
   
   ## operates on a unique observation (model_id, reference_datetime, site_id, datetime, family, variable)
   fam <- unique(family)
   arg <- switch(fam, 
-                sample = list(list(predicted)),
-                as.list(predicted)
+                sample = list(list(prediction)),
+                as.list(prediction)
   )
   fn <- eval(rlang::parse_expr(paste0("distributional::dist_", fam)))
   dist <- tryCatch(
@@ -42,11 +42,11 @@ globalVariables(c("model_id", "reference_datetime",
 # source(system.file("extdata/standard-format-examples.R", package="score4cast"))
 # fc <- inner_join(ex_forecast, ex_target) |>  efi_to_fable()
 # summary stats
-# fc |> mutate(mean = mean(predicted), sd = sqrt(distributional::variance(predicted)))
+# fc |> mutate(mean = mean(prediction), sd = sqrt(distributional::variance(prediction)))
 
 
 
-# obs <- fc |> as_tsibble() |> select(-predicted) |> rename(predicted = observed)
+# obs <- fc |> as_tsibble() |> select(-prediction) |> rename(prediction = observed)
 # fc |> accuracy(obs, measures = lst(CRPS, log_score), by = c("model_id", "site_id", "reference_datetime", "datetime", "variable"))
 # 
 # fc |> accuracy(obs)
@@ -69,7 +69,7 @@ log_score <- function(.dist, .actual, ...) {
 }
 
 # This works
-# obs <- fc |> as_tsibble() |> select(-predicted) |> rename(predicted = observed)
+# obs <- fc |> as_tsibble() |> select(-prediction) |> rename(prediction = observed)
 # fc |> accuracy(obs)
 
 

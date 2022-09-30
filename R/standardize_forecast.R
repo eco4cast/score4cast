@@ -15,7 +15,7 @@
 #' - datetime
 #' - family
 #' - parameter
-#' - predicted
+#' - prediction
 #' 
 #' This function does not handle un-pivoted (v0.3) forecast, see pivot_forecast()
 #' 
@@ -31,7 +31,7 @@ standardize_forecast <- function(df, filename=NULL) {
     df <- df |>
       tidyr::pivot_longer(dplyr::any_of(c("mean", "sd")),
                           names_to = "parameter", 
-                          values_to = "predicted") |>
+                          values_to = "prediction") |>
       dplyr::mutate(family="normal",
                     parameter=forcats::fct_recode(parameter,
                                                   mu="mean", 
@@ -104,10 +104,14 @@ standardize_forecast <- function(df, filename=NULL) {
     
   }
   
-  ## Some tick counts are predicted as integer (ensemble), but not always (parametric).
+  if("predicted" %in% colnames(df)) {
+    df <- df |> rename(prediction = predicted)
+  }
+  
+  ## Some tick counts are prediction as integer (ensemble), but not always (parametric).
   ## for consistent typing, always treat this field as numeric
-  if(inherits(df$predicted, "integer")) {
-    df <- df |> mutate(predicted = as.numeric(predicted))
+  if(inherits(df$prediction, "integer")) {
+    df <- df |> mutate(prediction = as.numeric(prediction))
   }
 
   ## ensemble number should not be an integer/factor,
@@ -126,6 +130,23 @@ standardize_forecast <- function(df, filename=NULL) {
   df <- df |> mutate(reference_datetime = as.character(reference_datetime))
   options("digits.secs"=original)
     
+  df
+  
+}
+
+
+
+#' Transform older (v0.4) standard to current standard
+#' 
+#' @param df a target data.frame
+#' @export
+
+standardize_target <- function(df, filename=NULL) {
+  
+  if (!"observed" %in% colnames(df)) {
+    df <- df |> rename(observation = observed)
+  }
+  
   df
   
 }

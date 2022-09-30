@@ -7,21 +7,21 @@ fable_to_efi <- function(df) {
   ## How do we handle transformed cases?
   
   dt <- tsibble::index(df)
-  predicted <- rlang::sym( fabletools::response_vars(df) )
+  prediction <- rlang::sym( fabletools::response_vars(df) )
   keys <- tsibble::key(df)
   
   df2 <- df |>
     tibble::as_tibble() |> 
     dplyr::mutate( datetime = lubridate::as_datetime({{dt}})) |>
-    dplyr::mutate( family = family({{predicted}}) ) |>
-    group_by(family, datetime, {{predicted}}, across(as.character(keys))) |>
+    dplyr::mutate( family = family({{prediction}}) ) |>
+    group_by(family, datetime, {{prediction}}, across(as.character(keys))) |>
     dplyr::summarise(parameter = 
-                       names(distributional::parameters({{predicted}})),
-                     predicted =
-                       unlist(distributional::parameters({{predicted}})),
+                       names(distributional::parameters({{prediction}})),
+                     prediction =
+                       unlist(distributional::parameters({{prediction}})),
                      .groups = "drop") |>
     dplyr::select(any_of(c("datetime", as.character(keys),
-                           "family", "parameter", "predicted")))
+                           "family", "parameter", "prediction")))
     
     df2
     
