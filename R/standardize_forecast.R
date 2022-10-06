@@ -4,6 +4,7 @@
 #' 
 #' @param df a forecast data.frame
 #' @param filename, optional.
+#' @param format, date or datetime format of reference_time "%Y-%m-%d %H:%M:%S"
 #' model_id and reference_datetime may be omitted if they are supplied in the
 #' filename.  If these columns exist, then filename is ignored.
 #' @details
@@ -20,7 +21,7 @@
 #' This function does not handle un-pivoted (v0.3) forecast, see pivot_forecast()
 #' 
 #' @export
-standardize_forecast <- function(df, filename=NULL) {
+standardize_forecast <- function(df, filename=NULL, format = "%Y-%m-%d") {
 
   if ("ensemble" %in% colnames(df)) {
     df <- df |>
@@ -124,11 +125,8 @@ standardize_forecast <- function(df, filename=NULL) {
   if ( nrow( dplyr::filter(df, variable %in%  iso_vars ) ) > 0 ) {
     df <- df |> mutate(datetime = isoweek(datetime))
   }
-  
-  original <- getOption("digits.sec")
-  options("digits.secs"=0)
-  df <- df |> mutate(reference_datetime = as.character(reference_datetime))
-  options("digits.secs"=original)
+
+  df <- df |> mutate(reference_datetime = strftime(lubridate::as_datetime(reference_datetime),format=format))
     
   df
   
@@ -143,7 +141,7 @@ standardize_forecast <- function(df, filename=NULL) {
 
 standardize_target <- function(df, filename=NULL) {
   
-  if (!"observed" %in% colnames(df)) {
+  if ("observed" %in% colnames(df)) {
     df <- df |> rename(observation = observed)
   }
   
