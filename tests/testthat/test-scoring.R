@@ -14,7 +14,7 @@ test_that("family-based standards work", {
   
   who <- colnames(scores)
   expect_true(all(c("site_id", "datetime", "family",
-                    "variable", "observed", "crps",
+                    "variable", "observation", "crps",
                     "logs", "mean", "sd", "quantile10", 
                     "reference_datetime", "model_id") %in%
     who))
@@ -36,7 +36,7 @@ test_that("unit tests", {
   
   who <- colnames(scores)
   expect_true(all(c("site_id", "datetime", "family",
-                    "variable", "observed", "crps",
+                    "variable", "observation", "crps",
                     "logs", "mean", "sd", "quantile10", 
                     "reference_datetime", "model_id") %in%
                     who))
@@ -46,7 +46,7 @@ test_that("unit tests", {
   
   who <- colnames(scores)
   expect_true(all(c("site_id", "datetime", "family",
-                    "variable", "observed", "crps",
+                    "variable", "observation", "crps",
                     "logs", "mean", "sd", "quantile10", 
                     "reference_datetime", "model_id", "horizon") %in%
                     who))
