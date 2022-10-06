@@ -7,6 +7,8 @@ test_that("family-based standards work", {
                      package="score4cast",
                      mustWork = TRUE))
   
+  ex_forecast <- standardize_forecast(ex_forecast)
+  
   scores <- crps_logs_score(ex_forecast, ex_target)
   expect_true(inherits(scores, "data.frame"))
   
@@ -25,6 +27,8 @@ test_that("unit tests", {
   source(system.file("extdata/standard-format-examples.R",
                      package="score4cast",
                      mustWork = TRUE))
+  
+  ex_forecast <- standardize_forecast(ex_forecast)
   
   scores <- score(ex_forecast, ex_target)
   
@@ -56,6 +60,8 @@ test_that("unit tests", {
   source(system.file("extdata/standard-format-examples.R",
                      package="score4cast",
                      mustWork = TRUE))
+  
+  ex_forecast <- standardize_forecast(ex_forecast)
   
   scores <- score(ex_forecast, ex_target)
   filled <- fill_scores(scores, "gauss_team")
