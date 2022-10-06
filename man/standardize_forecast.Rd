@@ -4,12 +4,18 @@
 \alias{standardize_forecast}
 \title{Transform older (v0.4) standard to current standard}
 \usage{
-standardize_forecast(df, filename = NULL)
+standardize_forecast(
+  df,
+  filename = NULL,
+  reference_datetime_format = "\%Y-\%m-\%d"
+)
 }
 \arguments{
 \item{df}{a forecast data.frame}
 
-\item{filename, }{optional.
+\item{filename}{filename, which might be parsed to extract reference_datetime and model_id. Optional.}
+
+\item{reference_datetime_format, }{date or datetime format of reference_time, default to "\%Y-\%m-\%d"
 model_id and reference_datetime may be omitted if they are supplied in the
 filename.  If these columns exist, then filename is ignored.}
 }
@@ -26,7 +32,7 @@ Current standard should have columns:
 \item datetime
 \item family
 \item parameter
-\item predicted
+\item prediction
 }
 
 This function does not handle un-pivoted (v0.3) forecast, see pivot_forecast()

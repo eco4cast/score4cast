@@ -11,7 +11,7 @@ score_theme(
   s3_scores,
   s3_prov,
   max_horizon = 365L,
-  local_prov = "scoring_provenance.csv"
+  local_prov = paste0(theme, "-scoring-prov.csv")
 )
 }
 \arguments{

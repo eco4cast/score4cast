@@ -3,7 +3,7 @@
 #' Transform older (v0.4) standard to current standard
 #' 
 #' @param df a forecast data.frame
-#' @param filename, optional.
+#' @param filename filename, which might be parsed to extract reference_datetime and model_id. Optional.
 #' @param reference_datetime_format, date or datetime format of reference_time, default to "%Y-%m-%d"
 #' model_id and reference_datetime may be omitted if they are supplied in the
 #' filename.  If these columns exist, then filename is ignored.
@@ -136,7 +136,7 @@ standardize_forecast <- function(df, filename=NULL, reference_datetime_format = 
 
 #' Transform older (v0.4) standard to current standard
 #' 
-#' @param df a target data.frame
+#' @inheritParams standardize_forecast
 #' @export
 
 standardize_target <- function(df, filename=NULL) {
@@ -149,5 +149,6 @@ standardize_target <- function(df, filename=NULL) {
   
 }
 
-globalVariables(c("ensemble", "filename", "pub_time", "start_time", "time"),
+globalVariables(c("ensemble", "filename", "pub_time", "start_time", "time",
+                  "observed", "predicted"),
                 package="score4cast")
