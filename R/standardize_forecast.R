@@ -4,7 +4,7 @@
 #' 
 #' @param df a forecast data.frame
 #' @param filename, optional.
-#' @param format, date or datetime format of reference_time "%Y-%m-%d %H:%M:%S"
+#' @param reference_datetime_format, date or datetime format of reference_time, default to "%Y-%m-%d"
 #' model_id and reference_datetime may be omitted if they are supplied in the
 #' filename.  If these columns exist, then filename is ignored.
 #' @details
@@ -126,7 +126,7 @@ standardize_forecast <- function(df, filename=NULL, format = "%Y-%m-%d") {
     df <- df |> mutate(datetime = isoweek(datetime))
   }
 
-  df <- df |> mutate(reference_datetime = strftime(lubridate::as_datetime(reference_datetime),format=format))
+  df <- df |> mutate(reference_datetime = strftime(lubridate::as_datetime(reference_datetime),format=reference_datetime_format))
     
   df
   
