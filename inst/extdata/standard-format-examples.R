@@ -3,7 +3,7 @@ library(dplyr)
 library(lubridate)
 # "sample" = "ensemble"
 ensemble_forecast <- tibble::tribble(
-  ~model_id, ~reference_datetime,    ~site_id, ~datetime,                  ~family,    ~parameter, ~variable,     ~predicted,
+  ~model_id, ~reference_datetime,    ~site_id, ~datetime,                  ~family,    ~parameter, ~variable,     ~prediction,
   "ensemble_team", "2022-02-01", "BARC",   "2022-02-02 00:00:00Z",  "sample",  "1",       "oxygen",      5.55,
   "ensemble_team", "2022-02-01", "BARC",   "2022-02-02 00:00:00Z",  "sample",  "1",       "temperature", 24.5,
   "ensemble_team", "2022-02-01", "BARC",   "2022-02-02 00:00:00Z",  "sample",  "2",       "oxygen",      5.25,
@@ -16,7 +16,7 @@ ensemble_forecast <- tibble::tribble(
 # normal = normalal = gaussian 
 # larger example just as sanity check that we handle additional grouping variables (site_id, datetime) correctly:
 gaussian_forecast <- tibble::tribble(
-  ~model_id, ~reference_datetime,    ~site_id, ~datetime,                  ~family,    ~parameter, ~variable,     ~predicted,
+  ~model_id, ~reference_datetime,    ~site_id, ~datetime,                  ~family,    ~parameter, ~variable,     ~prediction,
   "gauss_team", "2022-02-01", "BARC",   "2022-02-02 00:00:00Z",  "normal",  "mu",       "oxygen",        5.55,
   "gauss_team", "2022-02-01", "BARC",   "2022-02-02 00:00:00Z",  "normal",  "sigma",    "oxygen",        0.2,
   "gauss_team", "2022-02-01", "BARC",   "2022-02-02 00:00:00Z",  "normal",  "mu",       "temperature",   24.5,
