@@ -21,7 +21,7 @@
 #' This function does not handle un-pivoted (v0.3) forecast, see pivot_forecast()
 #' 
 #' @export
-standardize_forecast <- function(df, filename=NULL, format = "%Y-%m-%d") {
+standardize_forecast <- function(df, filename=NULL, reference_datetime_format = "%Y-%m-%d") {
 
   if ("ensemble" %in% colnames(df)) {
     df <- df |>
