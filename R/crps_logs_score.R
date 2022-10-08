@@ -65,7 +65,7 @@ generic_logs <- function(family, parameter, prediction, observation){
   names(prediction) = parameter
   y <- dplyr::first(observation)
   tryCatch(
-    switch(unique(family),
+    switch(unique(as.character(family)),
            lognormal = scoringRules::logs_lnorm(y, prediction['mu'], prediction['sigma']),
            normal = scoringRules::logs_norm(y, prediction['mu'], prediction['sigma']),
            sample = scoringRules::logs_sample(y, prediction)
