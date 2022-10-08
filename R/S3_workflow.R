@@ -27,7 +27,8 @@ score_theme <- function(theme,
                         s3_scores, 
                         s3_prov,
                         max_horizon = 365L,
-                        local_prov =  paste0(theme, "-scoring-prov.csv")){
+                        local_prov =  paste0(theme, "-scoring-prov.csv")
+                        ){
   
   prov_download(s3_prov, local_prov)
   prov_df <- readr::read_csv(local_prov, show_col_types = FALSE)
@@ -54,7 +55,7 @@ score_theme <- function(theme,
                         " eta: :eta"),
     total = n, 
     clear = FALSE, width= 80)  
-  for (i in 1:n) {  
+  for (i in 1:n) {
 
     pb$tick()
     group <- grouping[i,]
@@ -82,7 +83,9 @@ score_theme <- function(theme,
                       site_id == group$site_id) |> 
         dplyr::collect()
       
-      crps_logs_score(fc_i, tg) |>
+      fc_i |> 
+        filter(!is.na(family)) |>
+        crps_logs_score(tg) |>
         arrow::write_dataset(s3_scores_path,
                              partitioning = c("model_id",
                                               "reference_datetime",
