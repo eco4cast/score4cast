@@ -52,7 +52,7 @@ generic_crps <- function(family, parameter, prediction, observation){
   names(prediction) = parameter
   y <- dplyr::first(observation)
   tryCatch(
-  switch(unique(family),
+  switch(unique(as.character(family)),
          lognormal = scoringRules::crps_lnorm(y, prediction['mu'], prediction['sigma']),
          normal = scoringRules::crps_norm(y, prediction['mu'], prediction['sigma']),
          sample = scoringRules::crps_sample(y, prediction)
