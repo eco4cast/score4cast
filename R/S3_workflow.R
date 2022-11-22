@@ -1,4 +1,37 @@
+score_schema <- arrow::schema(
+  datetime = timestamp("us"), 
+  family=string(),
+  variable = string(), 
+  prediction=double(), 
+  reference_datetime=string(),
+  site_id=string(),
+  model_id = string(),
+  observation=double(),
+  crps = double(),
+  logs = double(),
+  mean = double(),
+  median = double(),
+  sd = double(),
+  quantile97.5 = double(),
+  quantile02.5 = double(),
+  quantile90 = double(),
+  quantile10= double()
+)
 
+
+
+forecast_schema = 
+  arrow::schema(target_id = string(), 
+                datetime = timestamp("us"), 
+                parameter=string(),
+                variable = string(), 
+                prediction=double(),
+                family=string(),
+                reference_datetime=string(),
+                site_id=string(),
+                model_id = string(),
+                date=string()
+                )
 
 #' score_theme
 #' 
@@ -40,13 +73,15 @@ score_theme <- function(theme,
   timing <- bench::bench_time({
     
   target <- get_target(theme, s3_targets)
-  fc <- arrow::open_dataset(s3_forecasts$path(glue::glue("parquet/{theme}"))) 
+  
+  fc_path <- s3_forecasts$path(glue::glue("parquet/{theme}"))
+  fc <- arrow::open_dataset(fc_path, schema=forecast_schema) 
 
   ## We will score in group chunks (model/date/site) to save RAM
   ## Computing group list can be pretty slow when many files are involved!
   ## does not seem to be leveraging partition names!
   grouping <- fc |> 
-    dplyr::distinct(model_id, reference_datetime, site_id) |>
+    dplyr::distinct(model_id, date) |>
     dplyr::collect()
   n <- nrow(grouping)
   
@@ -60,18 +95,13 @@ score_theme <- function(theme,
     pb$tick()
     group <- grouping[i,]
 
-    ref <- lubridate::as_date(group$reference_datetime)
-    bounds <- list(min = ref, max = ref + max_horizon)
-    
+    ref <- lubridate::as_datetime(group$date)
+
     tg <- target |>
-      filter(datetime >= bounds$min,
-             datetime <= bounds$max)
+      filter(datetime >= ref, datetime < ref+lubridate::day())
 
     ## ID changes only if target has changed between dates for this group
-    id <- rlang::hash(list(group$model_id, 
-                           group$reference_datetime,
-                           group$site_id,
-                           tg))
+    id <- rlang::hash(list(group,  tg))
     
     if (!prov_has(id, prov_df)) {
       
@@ -79,8 +109,7 @@ score_theme <- function(theme,
     ## otherwise we can skip after only looking at forecast file names (partitions).
       fc_i <- fc |> 
         dplyr::filter(model_id == group$model_id, 
-                      reference_datetime == group$reference_datetime,
-                      site_id == group$site_id) |> 
+                      date == group$date) |> 
         dplyr::collect()
       
       fc_i |> 
@@ -88,8 +117,7 @@ score_theme <- function(theme,
         crps_logs_score(tg) |>
         arrow::write_dataset(s3_scores_path,
                              partitioning = c("model_id",
-                                              "reference_datetime",
-                                              "site_id"))
+                                              "date"))
       prov_add(id, local_prov)
     }
 
