@@ -48,9 +48,6 @@ forecast_schema =
 #' This connection requires write access, e.g. by specifying 
 #  AWS_ACCESS_KEY_ID & AWS_SECRET_ACCESS_KEY env vars.
 #' @param s3_prov a connection from [arrow::s3_bucket]
-#' @param max_horizon days after the reference_date that a given forecast should cover.
-#' Can exceed the actual max horizon. Allows us to avoid re-scoring old forecasts when
-#' targets are updated with future values but leave old values unchanged.
 #' @param local_prov path to local csv file which will be used to 
 #' store provenance until theme is finished scoring.
 #' @export
@@ -59,7 +56,6 @@ score_theme <- function(theme,
                         s3_targets, 
                         s3_scores, 
                         s3_prov,
-                        max_horizon = 365L,
                         local_prov =  paste0(theme, "-scoring-prov.csv")
 ){
   
