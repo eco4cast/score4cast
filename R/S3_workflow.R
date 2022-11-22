@@ -1,36 +1,36 @@
 score_schema <- arrow::schema(
-  datetime = timestamp("us"), 
-  family=string(),
-  variable = string(), 
-  prediction=double(), 
-  reference_datetime=string(),
-  site_id=string(),
-  model_id = string(),
-  observation=double(),
-  crps = double(),
-  logs = double(),
-  mean = double(),
-  median = double(),
-  sd = double(),
-  quantile97.5 = double(),
-  quantile02.5 = double(),
-  quantile90 = double(),
-  quantile10= double()
+  datetime = arrow::timestamp("us"), 
+  family=arrow::string(),
+  variable = arrow::string(), 
+  prediction=arrow::float64(), 
+  reference_datetime=arrow::string(),
+  site_id=arrow::string(),
+  model_id = arrow::string(),
+  observation=arrow::float64(),
+  crps = arrow::float64(),
+  logs = arrow::float64(),
+  mean = arrow::float64(),
+  median = arrow::float64(),
+  sd = arrow::float64(),
+  quantile97.5 = arrow::float64(),
+  quantile02.5 = arrow::float64(),
+  quantile90 = arrow::float64(),
+  quantile10= arrow::float64()
 )
 
 
 
 forecast_schema = 
-  arrow::schema(target_id = string(), 
-                datetime = timestamp("us"), 
-                parameter=string(),
-                variable = string(), 
-                prediction=double(),
-                family=string(),
-                reference_datetime=string(),
-                site_id=string(),
-                model_id = string(),
-                date=string()
+  arrow::schema(target_id = arrow::string(), 
+                datetime = arrow::timestamp("us"), 
+                parameter=arrow::string(),
+                variable = arrow::string(), 
+                prediction=arrow::float64(),
+                family=arrow::string(),
+                reference_datetime=arrow::string(),
+                site_id=arrow::string(),
+                model_id = arrow::string(),
+                date=arrow::string()
                 )
 
 #' score_theme
@@ -75,11 +75,9 @@ score_theme <- function(theme,
   target <- get_target(theme, s3_targets)
   
   fc_path <- s3_forecasts$path(glue::glue("parquet/{theme}"))
-  fc <- arrow::open_dataset(fc_path, schema=forecast_schema) 
 
-  ## We will score in group chunks (model/date/site) to save RAM
-  ## Computing group list can be pretty slow when many files are involved!
-  ## does not seem to be leveraging partition names!
+  ## We could assemble this from s3_forecasts$ls() instead
+  fc <- arrow::open_dataset(fc_path, schema=forecast_schema) 
   grouping <- fc |> 
     dplyr::distinct(model_id, date) |>
     dplyr::collect()
@@ -98,7 +96,7 @@ score_theme <- function(theme,
     ref <- lubridate::as_datetime(group$date)
 
     tg <- target |>
-      filter(datetime >= ref, datetime < ref+lubridate::day())
+      filter(datetime >= ref, datetime < ref+lubridate::days(1))
 
     ## ID changes only if target has changed between dates for this group
     id <- rlang::hash(list(group,  tg))
@@ -115,6 +113,7 @@ score_theme <- function(theme,
       fc_i |> 
         filter(!is.na(family)) |>
         crps_logs_score(tg) |>
+        mutate(date = group$date) |>
         arrow::write_dataset(s3_scores_path,
                              partitioning = c("model_id",
                                               "date"))
