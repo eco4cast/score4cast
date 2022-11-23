@@ -20,18 +20,6 @@ score_schema <- arrow::schema(
 
 
 
-forecast_schema = 
-  arrow::schema(target_id = arrow::string(), 
-                datetime = arrow::timestamp("us"), 
-                parameter=arrow::string(),
-                variable = arrow::string(), 
-                prediction=arrow::float64(),
-                family=arrow::string(),
-                reference_datetime=arrow::string(),
-                site_id=arrow::string(),
-                model_id = arrow::string(),
-                date=arrow::string()
-  )
 
 #' score_theme
 #' 
@@ -72,6 +60,20 @@ score_theme <- function(theme,
     
     fc_path <- s3_forecasts$path(glue::glue("parquet/{theme}"))
     
+    
+    
+    forecast_schema <- 
+      arrow::schema(target_id = arrow::string(), 
+                    datetime = arrow::timestamp("us"), 
+                    parameter=arrow::string(),
+                    variable = arrow::string(), 
+                    prediction=arrow::float64(),
+                    family=arrow::string(),
+                    reference_datetime=arrow::string(),
+                    site_id=arrow::string(),
+                    model_id = arrow::string(),
+                    date=arrow::string()
+    )
     ## We could assemble this from s3_forecasts$ls() instead
     fc <- arrow::open_dataset(fc_path, schema=forecast_schema)
     
