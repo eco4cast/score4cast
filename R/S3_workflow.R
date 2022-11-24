@@ -1,3 +1,24 @@
+score_schema <- arrow::schema(
+  datetime = arrow::timestamp("us"), 
+  family=arrow::string(),
+  variable = arrow::string(), 
+  prediction=arrow::float64(), 
+  reference_datetime=arrow::string(),
+  site_id=arrow::string(),
+  model_id = arrow::string(),
+  observation=arrow::float64(),
+  crps = arrow::float64(),
+  logs = arrow::float64(),
+  mean = arrow::float64(),
+  median = arrow::float64(),
+  sd = arrow::float64(),
+  quantile97.5 = arrow::float64(),
+  quantile02.5 = arrow::float64(),
+  quantile90 = arrow::float64(),
+  quantile10= arrow::float64()
+)
+
+
 
 
 #' score_theme
@@ -15,9 +36,6 @@
 #' This connection requires write access, e.g. by specifying 
 #  AWS_ACCESS_KEY_ID & AWS_SECRET_ACCESS_KEY env vars.
 #' @param s3_prov a connection from [arrow::s3_bucket]
-#' @param max_horizon days after the reference_date that a given forecast should cover.
-#' Can exceed the actual max horizon. Allows us to avoid re-scoring old forecasts when
-#' targets are updated with future values but leave old values unchanged.
 #' @param local_prov path to local csv file which will be used to 
 #' store provenance until theme is finished scoring.
 #' @export
@@ -26,9 +44,8 @@ score_theme <- function(theme,
                         s3_targets, 
                         s3_scores, 
                         s3_prov,
-                        max_horizon = 365L,
                         local_prov =  paste0(theme, "-scoring-prov.csv")
-                        ){
+){
   
   prov_download(s3_prov, local_prov)
   prov_df <- readr::read_csv(local_prov, show_col_types = FALSE)
@@ -39,63 +56,70 @@ score_theme <- function(theme,
   
   timing <- bench::bench_time({
     
-  target <- get_target(theme, s3_targets)
-  fc <- arrow::open_dataset(s3_forecasts$path(glue::glue("parquet/{theme}"))) 
-
-  ## We will score in group chunks (model/date/site) to save RAM
-  ## Computing group list can be pretty slow when many files are involved!
-  ## does not seem to be leveraging partition names!
-  grouping <- fc |> 
-    dplyr::distinct(model_id, reference_datetime, site_id) |>
-    dplyr::collect()
-  n <- nrow(grouping)
-  
-  pb <- progress::progress_bar$new(
-    format = glue::glue("  scoring {theme} [:bar] :percent in :elapsed,",
-                        " eta: :eta"),
-    total = n, 
-    clear = FALSE, width= 80)  
-  for (i in 1:n) {
-
-    pb$tick()
-    group <- grouping[i,]
-
-    ref <- lubridate::as_date(group$reference_datetime)
-    bounds <- list(min = ref, max = ref + max_horizon)
+    target <- get_target(theme, s3_targets)
     
-    tg <- target |>
-      filter(datetime >= bounds$min,
-             datetime <= bounds$max)
-
-    ## ID changes only if target has changed between dates for this group
-    id <- rlang::hash(list(group$model_id, 
-                           group$reference_datetime,
-                           group$site_id,
-                           tg))
+    fc_path <- s3_forecasts$path(glue::glue("parquet/{theme}"))
     
-    if (!prov_has(id, prov_df)) {
+    
+    
+    forecast_schema <- 
+      arrow::schema(target_id = arrow::string(), 
+                    datetime = arrow::timestamp("us"), 
+                    parameter=arrow::string(),
+                    variable = arrow::string(), 
+                    prediction=arrow::float64(),
+                    family=arrow::string(),
+                    reference_datetime=arrow::string(),
+                    site_id=arrow::string(),
+                    model_id = arrow::string(),
+                    date=arrow::string()
+    )
+    ## We could assemble this from s3_forecasts$ls() instead
+    fc <- arrow::open_dataset(fc_path, schema=forecast_schema)
+    
+    grouping <- get_grouping(fc_path)
+    n <- nrow(grouping)
+    
+    pb <- progress::progress_bar$new(
+      format = glue::glue("  scoring {theme} [:bar] :percent in :elapsed,",
+                          " eta: :eta"),
+      total = n, 
+      clear = FALSE, width= 80)  
+    for (i in 1:n) {
       
-    ## Forecast data (parquet content) is only read if it needs be scored
-    ## otherwise we can skip after only looking at forecast file names (partitions).
-      fc_i <- fc |> 
-        dplyr::filter(model_id == group$model_id, 
-                      reference_datetime == group$reference_datetime,
-                      site_id == group$site_id) |> 
-        dplyr::collect()
+      pb$tick()
+      group <- grouping[i,]
       
-      fc_i |> 
-        filter(!is.na(family)) |>
-        crps_logs_score(tg) |>
-        arrow::write_dataset(s3_scores_path,
-                             partitioning = c("model_id",
-                                              "reference_datetime",
-                                              "site_id"))
-      prov_add(id, local_prov)
+      ref <- lubridate::as_datetime(group$date)
+      
+      tg <- target |>
+        filter(datetime >= ref, datetime < ref+lubridate::days(1))
+      
+      ## ID changes only if target has changed between dates for this group
+      id <- rlang::hash(list(group,  tg))
+      
+      if (!prov_has(id, prov_df)) {
+        
+        ## Forecast data (parquet content) is only read if it needs be scored
+        ## otherwise we can skip after only looking at forecast file names (partitions).
+        fc_i <- fc |> 
+          dplyr::filter(model_id == group$model_id, 
+                        date == group$date) |> 
+          dplyr::collect()
+        
+        fc_i |> 
+          filter(!is.na(family)) |>
+          crps_logs_score(tg) |>
+          mutate(date = group$date) |>
+          arrow::write_dataset(s3_scores_path,
+                               partitioning = c("model_id",
+                                                "date"))
+        prov_add(id, local_prov)
+      }
+      
     }
-
-  }
-  
- })
+    
+  })
   
   ## hack to merge prov with any updates to prov posted while we were running.
   #prov_download(s3_prov, "tmp.csv")
@@ -107,6 +131,18 @@ score_theme <- function(theme,
   ## now sync prov back to S3
   prov_upload(s3_prov, local_prov)
   timing
+}
+
+
+get_grouping <- function(s3) {
+  models <- stringr::str_remove(basename(s3$ls()), "model_id=")
+  out <- purrr::map_dfr(models, function(model_id) {
+    date <- glue::glue("model_id={model_id}") |>
+      s3$ls() |> basename() |>
+      stringr::str_remove("date=")
+    tibble::tibble(model_id,date)
+  })
+  out
 }
 
 
