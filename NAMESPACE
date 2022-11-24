@@ -2,6 +2,7 @@
 
 export(crps_logs_score)
 export(fill_scores)
+export(ignore_sigpipe)
 export(include_horizon)
 export(mean_scores)
 export(pivot_forecast)
