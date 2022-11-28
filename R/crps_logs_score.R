@@ -80,7 +80,7 @@ generic_logs <- function(family, parameter, prediction, observation){
 
 
 
-globalVariables(c("family", "parameter", "prediction", "observed", "dist"),
+globalVariables(c("family", "parameter", "prediction", "observation", "dist"),
                 package="score4cast")
 
 
