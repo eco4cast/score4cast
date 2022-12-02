@@ -126,7 +126,7 @@ standardize_forecast <- function(df, filename=NULL, reference_datetime_format = 
     df <- df |> mutate(datetime = isoweek(datetime))
   }
 
-  df <- df |> mutate(reference_datetime = strftime(lubridate::as_datetime(reference_datetime),format=reference_datetime_format))
+  df <- df |> mutate(reference_datetime = strftime(lubridate::as_datetime(reference_datetime),format=reference_datetime_format,tz = "UTC"))
     
   df
   
