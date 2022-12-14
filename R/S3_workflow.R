@@ -89,7 +89,6 @@ score_theme <- function(theme,
       
       pb$tick()
       group <- grouping[i,]
-      
       ref <- lubridate::as_datetime(group$date)
       
       tg <- target |>
@@ -115,6 +114,7 @@ score_theme <- function(theme,
                                partitioning = c("model_id",
                                                 "date"))
         prov_add(id, local_prov)
+        gc()
       }
       
     }
@@ -135,11 +135,17 @@ score_theme <- function(theme,
 
 
 get_grouping <- function(s3) {
+  
+  ## file-path version of:
+  #  arrow::open_dataset(s3) |> dplyr::distinct(model_id, date) |>
+  # dplyr::collect() 
+  
   models <- stringr::str_remove(basename(s3$ls()), "model_id=")
   out <- purrr::map_dfr(models, function(model_id) {
     date <- glue::glue("model_id={model_id}") |>
-      s3$ls() |> basename() |>
-      stringr::str_remove("date=")
+      s3$ls(recursive=TRUE) |> 
+      stringr::str_match("date=(\\d{4}-\\d{2}-\\d{2})")
+    date <- na.omit(date[,2])
     tibble::tibble(model_id,date)
   })
   out
