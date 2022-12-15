@@ -1,24 +1,3 @@
-score_schema <- arrow::schema(
-  datetime = arrow::timestamp("us"), 
-  family=arrow::string(),
-  variable = arrow::string(), 
-  prediction=arrow::float64(), 
-  reference_datetime=arrow::string(),
-  site_id=arrow::string(),
-  model_id = arrow::string(),
-  observation=arrow::float64(),
-  crps = arrow::float64(),
-  logs = arrow::float64(),
-  mean = arrow::float64(),
-  median = arrow::float64(),
-  sd = arrow::float64(),
-  quantile97.5 = arrow::float64(),
-  quantile02.5 = arrow::float64(),
-  quantile90 = arrow::float64(),
-  quantile10= arrow::float64()
-)
-
-
 
 
 #' score_theme
@@ -61,21 +40,9 @@ score_theme <- function(theme,
     fc_path <- s3_forecasts$path(glue::glue("parquet/{theme}"))
     
     
-    
-    forecast_schema <- 
-      arrow::schema(target_id = arrow::string(), 
-                    datetime = arrow::timestamp("us"), 
-                    parameter=arrow::string(),
-                    variable = arrow::string(), 
-                    prediction=arrow::float64(),
-                    family=arrow::string(),
-                    reference_datetime=arrow::string(),
-                    site_id=arrow::string(),
-                    model_id = arrow::string(),
-                    date=arrow::string()
-    )
+ 
     ## We could assemble this from s3_forecasts$ls() instead
-    fc <- arrow::open_dataset(fc_path, schema=forecast_schema)
+    fc <- arrow::open_dataset(fc_path, schema=forecast_schema())
     
     grouping <- get_grouping(fc_path)
     n <- nrow(grouping)
@@ -133,7 +100,7 @@ score_group <- function(i, grouping, fc, target,
     prov_add(id, local_prov)
   }
 }
-  
+
 
 
 get_grouping <- function(s3) {
@@ -147,7 +114,7 @@ get_grouping <- function(s3) {
     date <- glue::glue("model_id={model_id}") |>
       s3$ls(recursive=TRUE) |> 
       stringr::str_match("date=(\\d{4}-\\d{2}-\\d{2})")
-    date <- na.omit(date[,2])
+    date <- stats::na.omit(date[,2])
     tibble::tibble(model_id,date)
   })
   out
