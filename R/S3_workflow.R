@@ -85,53 +85,52 @@ score_theme <- function(theme,
                           " eta: :eta"),
       total = n, 
       clear = FALSE, width= 80)  
-    for (i in 1:n) {
-      
-      pb$tick()
-      group <- grouping[i,]
-      
-      ref <- lubridate::as_datetime(group$date)
-      
-      tg <- target |>
-        filter(datetime >= ref, datetime < ref+lubridate::days(1))
-      
-      ## ID changes only if target has changed between dates for this group
-      id <- rlang::hash(list(group,  tg))
-      
-      if (!prov_has(id, prov_df)) {
-        
-        ## Forecast data (parquet content) is only read if it needs be scored
-        ## otherwise we can skip after only looking at forecast file names (partitions).
-        fc_i <- fc |> 
-          dplyr::filter(model_id == group$model_id, 
-                        date == group$date) |> 
-          dplyr::collect()
-        
-        fc_i |> 
-          filter(!is.na(family)) |>
-          crps_logs_score(tg) |>
-          mutate(date = group$date) |>
-          arrow::write_dataset(s3_scores_path,
-                               partitioning = c("model_id",
-                                                "date"))
-        prov_add(id, local_prov)
-      }
-      
-    }
+    #for (i in 1:n) { pb$tick }
+    mclapply(1:n, 
+      score_group, grouping, prov_df, local_prov, s3_scores_path)
     
-  })
+   })
   
-  ## hack to merge prov with any updates to prov posted while we were running.
-  #prov_download(s3_prov, "tmp.csv")
-  #dplyr::bind_rows(readr::read_csv("tmp.csv", show_col_types = FALSE),
-  #                 readr::read_csv(local_prov, show_col_types = FALSE)) |>
-  #  dplyr::distinct() |>
-  #readr::write_csv(local_prov)
-  
-  ## now sync prov back to S3
+  ## now sync prov back to S3 -- overwrites
   prov_upload(s3_prov, local_prov)
   timing
 }
+
+
+score_group <- function(i, grouping, prov_df, local_prov, s3_scores_path) { 
+  
+  pb$tick()
+  
+  group <- grouping[i,]
+  
+  ref <- lubridate::as_datetime(group$date)
+  
+  tg <- target |>
+    filter(datetime >= ref, datetime < ref+lubridate::days(1))
+  
+  ## ID changes only if target has changed between dates for this group
+  id <- rlang::hash(list(group,  tg))
+  
+  if (!prov_has(id, prov_df)) {
+    
+    ## Forecast data (parquet content) is only read if it needs be scored
+    ## otherwise we can skip after only looking at forecast file names (partitions).
+    fc_i <- fc |> 
+      dplyr::filter(model_id == group$model_id, 
+                    date == group$date) |> 
+      dplyr::collect()
+    
+    fc_i |> 
+      filter(!is.na(family)) |>
+      crps_logs_score(tg) |>
+      mutate(date = group$date) |>
+      arrow::write_dataset(s3_scores_path,
+                           partitioning = c("model_id",
+                                            "date"))
+    prov_add(id, local_prov)
+  }
+}
+  
 
 
 get_grouping <- function(s3) {
