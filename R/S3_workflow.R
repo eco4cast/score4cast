@@ -102,7 +102,7 @@ score_theme <- function(theme,
 score_group <- function(i, grouping, fc, target,
                         prov_df, local_prov, s3_scores_path, pb) { 
   
- # pb$tick()
+  pb$tick()
   
   group <- grouping[i,]
   
