@@ -86,7 +86,7 @@ score_theme <- function(theme,
       total = n, 
       clear = FALSE, width= 80)  
     #for (i in 1:n) { pb$tick }
-    mclapply(1:n, 
+    parallel::mclapply(1:n, 
       score_group, grouping, prov_df, local_prov, s3_scores_path)
     
    })
