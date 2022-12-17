@@ -1,24 +1,3 @@
-score_schema <- arrow::schema(
-  datetime = arrow::timestamp("us"), 
-  family=arrow::string(),
-  variable = arrow::string(), 
-  prediction=arrow::float64(), 
-  reference_datetime=arrow::string(),
-  site_id=arrow::string(),
-  model_id = arrow::string(),
-  observation=arrow::float64(),
-  crps = arrow::float64(),
-  logs = arrow::float64(),
-  mean = arrow::float64(),
-  median = arrow::float64(),
-  sd = arrow::float64(),
-  quantile97.5 = arrow::float64(),
-  quantile02.5 = arrow::float64(),
-  quantile90 = arrow::float64(),
-  quantile10= arrow::float64()
-)
-
-
 
 
 #' score_theme
@@ -61,21 +40,9 @@ score_theme <- function(theme,
     fc_path <- s3_forecasts$path(glue::glue("parquet/{theme}"))
     
     
-    
-    forecast_schema <- 
-      arrow::schema(target_id = arrow::string(), 
-                    datetime = arrow::timestamp("us"), 
-                    parameter=arrow::string(),
-                    variable = arrow::string(), 
-                    prediction=arrow::float64(),
-                    family=arrow::string(),
-                    reference_datetime=arrow::string(),
-                    site_id=arrow::string(),
-                    model_id = arrow::string(),
-                    date=arrow::string()
-    )
+ 
     ## We could assemble this from s3_forecasts$ls() instead
-    fc <- arrow::open_dataset(fc_path, schema=forecast_schema)
+    fc <- arrow::open_dataset(fc_path, schema=forecast_schema())
     
     grouping <- get_grouping(fc_path)
     n <- nrow(grouping)
@@ -85,53 +52,55 @@ score_theme <- function(theme,
                           " eta: :eta"),
       total = n, 
       clear = FALSE, width= 80)  
-    for (i in 1:n) {
-      
-      pb$tick()
-      group <- grouping[i,]
-      ref <- lubridate::as_datetime(group$date)
-      
-      tg <- target |>
-        filter(datetime >= ref, datetime < ref+lubridate::days(1))
-      
-      ## ID changes only if target has changed between dates for this group
-      id <- rlang::hash(list(group,  tg))
-      
-      if (!prov_has(id, prov_df)) {
-        
-        ## Forecast data (parquet content) is only read if it needs be scored
-        ## otherwise we can skip after only looking at forecast file names (partitions).
-        fc_i <- fc |> 
-          dplyr::filter(model_id == group$model_id, 
-                        date == group$date) |> 
-          dplyr::collect()
-        
-        fc_i |> 
-          filter(!is.na(family)) |>
-          crps_logs_score(tg) |>
-          mutate(date = group$date) |>
-          arrow::write_dataset(s3_scores_path,
-                               partitioning = c("model_id",
-                                                "date"))
-        prov_add(id, local_prov)
-        gc()
-      }
-      
-    }
-    
-  })
+    #for (i in 1:n) { pb$tick }
+    parallel::mclapply(1:n, score_group, grouping, fc, target, prov_df,
+                       local_prov, s3_scores_path, pb)
+
+   })
   
-  ## hack to merge prov with any updates to prov posted while we were running.
-  #prov_download(s3_prov, "tmp.csv")
-  #dplyr::bind_rows(readr::read_csv("tmp.csv", show_col_types = FALSE),
-  #                 readr::read_csv(local_prov, show_col_types = FALSE)) |>
-  #  dplyr::distinct() |>
-  #readr::write_csv(local_prov)
-  
-  ## now sync prov back to S3
+  ## now sync prov back to S3 -- overwrites
   prov_upload(s3_prov, local_prov)
   timing
 }
+
+
+# ex <- score_group(1, grouping, fc, target, prov_df, local_prov, s3_scores_path, pb)
+
+score_group <- function(i, grouping, fc, target,
+                        prov_df, local_prov, s3_scores_path, pb) { 
+  
+  pb$tick()
+  
+  group <- grouping[i,]
+  
+  ref <- lubridate::as_datetime(group$date)
+  
+  tg <- target |>
+    filter(datetime >= ref, datetime < ref+lubridate::days(1))
+  
+  ## ID changes only if target has changed between dates for this group
+  id <- rlang::hash(list(group,  tg))
+  
+  if (!prov_has(id, prov_df)) {
+    
+    ## Forecast data (parquet content) is only read if it needs be scored
+    ## otherwise we can skip after only looking at forecast file names (partitions).
+    fc_i <- fc |> 
+      dplyr::filter(model_id == group$model_id, 
+                    date == group$date) |> 
+      dplyr::collect()
+    
+    fc_i |> 
+      filter(!is.na(family)) |>
+      crps_logs_score(tg) |>
+      mutate(date = group$date) |>
+      arrow::write_dataset(s3_scores_path,
+                           partitioning = c("model_id",
+                                            "date"))
+    prov_add(id, local_prov)
+  }
+}
+
 
 
 get_grouping <- function(s3) {
@@ -145,7 +114,7 @@ get_grouping <- function(s3) {
     date <- glue::glue("model_id={model_id}") |>
       s3$ls(recursive=TRUE) |> 
       stringr::str_match("date=(\\d{4}-\\d{2}-\\d{2})")
-    date <- na.omit(date[,2])
+    date <- stats::na.omit(date[,2])
     tibble::tibble(model_id,date)
   })
   out

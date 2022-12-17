@@ -30,6 +30,7 @@ Imports:
     fabletools,
     decor,
     cpp11,
+    parallel,
     read4cast (>= 0.0.0.9000)
 Suggests:
     bench,
