@@ -36,14 +36,8 @@ score_theme <- function(theme,
   timing <- bench::bench_time({
     
     target <- get_target(theme, s3_targets)
-    
     fc_path <- s3_forecasts$path(glue::glue("parquet/{theme}"))
-    
-    
- 
-    ## We could assemble this from s3_forecasts$ls() instead
     fc <- arrow::open_dataset(fc_path, schema=forecast_schema())
-    
     grouping <- get_grouping(fc_path)
     n <- nrow(grouping)
     
@@ -72,9 +66,10 @@ score_group <- function(i, grouping, fc, target,
   pb$tick()
   
   group <- grouping[i,]
-  
   ref <- lubridate::as_datetime(group$date)
   
+  # NOTE: we cannot 'prefilter' grouping by prov, since once we have tg
+  # we want to use it to score, not access it twice...
   tg <- target |>
     filter(datetime >= ref, datetime < ref+lubridate::days(1))
   
@@ -103,6 +98,7 @@ score_group <- function(i, grouping, fc, target,
 
 
 
+
 get_grouping <- function(s3) {
   
   ## file-path version of:
@@ -117,7 +113,7 @@ get_grouping <- function(s3) {
     date <- stats::na.omit(date[,2])
     tibble::tibble(model_id,date)
   })
-  out
+  dplyr::distinct(out)
 }
 
 
