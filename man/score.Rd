@@ -4,12 +4,23 @@
 \alias{score}
 \title{Compute the CRPS & logs score of your forecast}
 \usage{
-score(forecast, target, ...)
+score(
+  forecast,
+  target,
+  allow_difftime = getOption("neon4cast.allow_difftime", TRUE),
+  ...
+)
 }
 \arguments{
 \item{forecast}{forecast data frame or file}
 
 \item{target}{target path or URL (csv file)}
+
+\item{allow_difftime}{Allow horizon to be expressed in difftime?
+Default TRUE. Otherwise will be converted into a numeric expressing
+difftime in seconds.  Note that using difftime is not
+always compatible with other formats. Behavior can also be set
+globally using the option \code{neon4cast.allow_difftime}}
 
 \item{...}{additional parameters (Not used)}
 }
