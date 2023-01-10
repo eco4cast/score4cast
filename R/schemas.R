@@ -1,10 +1,12 @@
+#' Score schema in arrow format
+#' @export
 score_schema <- function() {
   arrow::schema(
     datetime = arrow::timestamp("us", timezone="UTC"), 
     family=arrow::string(),
     variable = arrow::string(), 
     prediction=arrow::float64(), 
-    reference_datetime=arrow::string(),
+    reference_datetime= arrow::timestamp("us", timezone="UTC"),
     site_id=arrow::string(),
     model_id = arrow::string(),
     observation=arrow::float64(),

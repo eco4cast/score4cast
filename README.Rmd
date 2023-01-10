@@ -1,0 +1,49 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# score4cast
+
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/eco4cast/score4cast/workflows/R-CMD-check/badge.svg)](https://github.com/eco4cast/score4cast/actions)
+[![CRAN status](https://www.r-pkg.org/badges/version/score4cast)](https://CRAN.R-project.org/package=score4cast)
+<!-- badges: end -->
+
+The goal of score4cast is to provide a convenient interface to score ecological forecasts that conform the EFI standard. 
+score4cast emphasizes the use of strictly proper scores (see [scoringRules]() R package or Gneiting & Raferty's landmark 2007 paper) for _probablistic_ forecasts.
+The EFI format provides a simple but flexible way to express both ensemble and parametric forecasts in a standard tabular layout. 
+
+
+## Installation
+
+You can install the development version of score4cast from [GitHub](https://github.com/) with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("eco4cast/score4cast")
+```
+
+## Example
+
+A forecast (in standardized format) is scored against a target (in standardized format):
+
+
+```{r example}
+library(score4cast)
+ex_data <- system.file("extdata/standard-format-examples.R", package="score4cast")
+source(ex_data)
+
+scores <- score(ex_forecast, ex_target)
+scores
+```

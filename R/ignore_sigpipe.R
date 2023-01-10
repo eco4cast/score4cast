@@ -22,4 +22,10 @@ dummy_decor <- function() {
   decor::cpp_decorations()
 }
 
+# Well this is mighty stupid
+dummy_brio <- function() {
+  requireNamespace("brio", quietly = TRUE)
+  brio::write_lines("", tempfile())
+}
+
 globalVariables("ignore_sigpipes")
