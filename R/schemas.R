@@ -6,7 +6,7 @@ score_schema <- function() {
     family=arrow::string(),
     variable = arrow::string(), 
     prediction=arrow::float64(), 
-    reference_datetime= arrow::timestamp("us", timezone="UTC"),
+    reference_datetime= arrow::string(), # arrow::timestamp("us", timezone="UTC"),
     site_id=arrow::string(),
     model_id = arrow::string(),
     observation=arrow::float64(),
