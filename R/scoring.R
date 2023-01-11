@@ -11,7 +11,7 @@
 #' @importFrom dplyr `%>%` pull mutate select distinct filter 
 #' @importFrom dplyr group_by summarise left_join rename
 #' 
-#' 
+#' @details Use `[standardize_forecast]` manually if necessary first.
 #' @export
 score <- function(forecast, target, 
                   allow_difftime = getOption("neon4cast.allow_difftime", TRUE),

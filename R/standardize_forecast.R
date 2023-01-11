@@ -51,14 +51,7 @@ standardize_forecast <- function(df, filename=NULL, reference_datetime_format = 
   }
 
   ## can only recode if factor is actually used:
-  if( nrow( dplyr::filter(df, family == "ensemble") ) > 0) {
-    df <- df |> dplyr::mutate(family = 
-                               forcats::fct_recode(family,
-                                                   sample="ensemble")
-    )
-  }
-
-  
+  df <- recode(df, "family", from="ensemble", to="sample")
   
   ##
   if ("pub_time" %in% colnames(df) && ! "reference_datetime" %in% colnames(df)) {
@@ -132,7 +125,16 @@ standardize_forecast <- function(df, filename=NULL, reference_datetime_format = 
   
 }
 
-
+## safer recode, only runs if exists
+recode <- function(df, col="family", from="ensemble", to="sample") {
+  
+  if( nrow( dplyr::filter(df, .data[[col]] == from) ) > 0) {
+    df <- dplyr::mutate(df,
+      {{col}} := as.character(
+        forcats::fct_recode(.data[[col]], {{to}}:={{from}}) ))
+  }
+  df
+}
 
 #' Transform older (v0.4) standard to current standard
 #' 

@@ -14,7 +14,8 @@ crps_logs_score <- function(forecast, target) {
     standardize_target() |> 
     dplyr::select("datetime", "site_id", "variable", "observation")
   
-  joined <- forecast |> 
+  # no longer run full 'standardize' call here.
+  joined <- forecast |> recode("family", from="ensemble", to="sample") |>
     dplyr::left_join(target, by = c("site_id", "datetime", "variable"))
   
   # use with across(any_of()) to avoid bare names; allows optional terms
