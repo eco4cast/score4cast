@@ -74,12 +74,14 @@ score_group <- function(i, grouping, fc, target,
     filter(datetime >= ref, datetime < ref+lubridate::days(1))
   
   ## ID changes only if target has changed between dates for this group
+  
+  
   id <- rlang::hash(list(group,  tg))
   
-  if (!prov_has(id, prov_df)) {
-    
-    ## Forecast data (parquet content) is only read if it needs be scored
-    ## otherwise we can skip after only looking at forecast file names (partitions).
+  ## If group$date is in future, we always need to rescore it to accumulate
+  ## most recent reference_datetimes in forecast
+  if (!prov_has(id, prov_df) & Sys.Date() > ref) {
+
     fc_i <- fc |> 
       dplyr::filter(model_id == group$model_id, 
                     date == group$date) |> 
