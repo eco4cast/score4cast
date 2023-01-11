@@ -27,3 +27,6 @@ globally using the option \code{neon4cast.allow_difftime}}
 \description{
 Compute the CRPS & logs score of your forecast
 }
+\details{
+Use \verb{[standardize_forecast]} manually if necessary first.
+}

@@ -126,6 +126,7 @@ standardize_forecast <- function(df, filename=NULL, reference_datetime_format = 
 }
 
 ## safer recode, only runs if exists
+#' @importFrom rlang := .data
 recode <- function(df, col="family", from="ensemble", to="sample") {
   
   if( nrow( dplyr::filter(df, .data[[col]] == from) ) > 0) {
