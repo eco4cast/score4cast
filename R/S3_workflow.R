@@ -80,7 +80,7 @@ score_group <- function(i, grouping, fc, target,
   
   ## If group$date is in future, we always need to rescore it to accumulate
   ## most recent reference_datetimes in forecast
-  if (!prov_has(id, prov_df) & Sys.Date() > ref) {
+  if (!prov_has(id, prov_df) | Sys.Date() < ref) {
 
     fc_i <- fc |> 
       dplyr::filter(model_id == group$model_id, 
