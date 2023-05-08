@@ -19,7 +19,7 @@ score_schema <- function() {
     quantile02.5 = arrow::float64(),
     quantile90 = arrow::float64(),
     quantile10= arrow::float64(),
-    created = arrow::string()
+    pubDate = arrow::string()
   )
 }
 
@@ -35,7 +35,7 @@ forecast_schema <- function() {
                 site_id=arrow::string(),
                 model_id = arrow::string(),
                 date=arrow::string(),
-                created = arrow::string()
+                pubDate = arrow::string()
                 
   )
 }

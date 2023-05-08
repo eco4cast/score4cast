@@ -20,7 +20,7 @@ crps_logs_score <- function(forecast, target) {
   
   # use with across(any_of()) to avoid bare names; allows optional terms
   grouping <- c("model_id", "reference_datetime", "site_id", 
-                "datetime", "family", "variable", "created")
+                "datetime", "family", "variable", "pubDate")
   
   scores <- joined |> 
       dplyr::group_by(dplyr::across(dplyr::any_of(grouping))) |> 
