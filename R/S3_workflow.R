@@ -100,8 +100,27 @@ score_group <- function(i, grouping, fc, target,
 
 
 
+get_grouping <- function(s3_inv, theme) {
+  
+  inv <- arrow::open_dataset(s3_inv$path("neon4cast-forecasts"))
+  inv |> 
+    filter(...1 == "parquet", ...2 == {theme}) |> 
+    select(model_id = ...3, reference_datetime = ...4, date = ...5) |>
+    mutate(model_id = gsub("model_id=", "", model_id),
+           reference_datetime = 
+             gsub("reference_datetime=", "", reference_datetime),
+           date = gsub("date=", "", date)) |>
+    collect() |>
+    group_by(model_id, date) |> 
+    summarize(reference_datetime = paste(reference_datetime, collapse=", "),
+              .groups = "drop")
+  
+}
+  
 
-get_grouping <- function(s3) {
+
+## deprecated, even ls-based method is too slow
+get_grouping_ls <- function(s3) {
   
   ## file-path version of:
   #  arrow::open_dataset(s3) |> dplyr::distinct(model_id, date) |>
@@ -128,7 +147,7 @@ get_target <- function(theme, s3) {
 
 
 
-## FIXME prov_has / prov_add could ideally read from & append to the *remote* S3 source.
+## NOTE cannot append to *remote* S3 sources, so prov_has / prov_add must work local and sync.
 
 prov_has <- function(id, prov) {
   ## would be fast even with remote file
