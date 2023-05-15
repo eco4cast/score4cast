@@ -1,6 +1,3 @@
-theme = "aquatics"
-local_prov =  paste0(theme, "-scoring-prov.csv")
-# remotes::install_deps()
 devtools::load_all()
 library(arrow)
 ignore_sigpipe()
@@ -11,27 +8,24 @@ Sys.unsetenv("AWS_DEFAULT_REGION")
 endpoint = "data.ecoforecast.org"
 s3_forecasts <- arrow::s3_bucket("neon4cast-forecasts", endpoint_override = endpoint)
 s3_targets <- arrow::s3_bucket("neon4cast-targets", endpoint_override = endpoint)
+s3_inv <- arrow::s3_bucket("neon4cast-inventory",  endpoint_override = "data.ecoforecast.org")
 ## Publishing Requires AWS_ACCESS_KEY_ID & AWS_SECRET_ACCESS_KEY set
 s3_scores <- arrow::s3_bucket("neon4cast-scores", endpoint_override = endpoint)
 s3_prov <- arrow::s3_bucket("neon4cast-prov", endpoint_override = endpoint)
-s3_scores <- arrow::SubTreeFileSystem$create("~/test_scores", arrow::LocalFileSystem$create())
-options("mc.cores"=4L)
+
+
+theme = "aquatics"
+local_prov =  paste0(theme, "-scoring-prov.csv")
 
 prov_download(s3_prov, local_prov)
 prov_df <- readr::read_csv(local_prov, show_col_types = FALSE)
 s3_scores_path <- s3_scores$path(glue::glue("parquet/{theme}", theme=theme))
 target <- get_target(theme, s3_targets)
 
-s3_inv <- arrow::s3_bucket("neon4cast-inventory",  endpoint_override = "data.ecoforecast.org", anonymous=TRUE)
 grouping <- get_grouping(s3_inv, theme, collapse = TRUE)
 
-
-## benchmark full
-grouping <- grouping
-
 ## benchmark on a subset:
-##grouping <- grouping |> mutate(model_id == "cb_prophet")
-
+grouping <- grouping |> filter(model_id == "cb_prophet")
 n <- nrow(grouping)
 
 pb <- progress::progress_bar$new(
@@ -60,8 +54,10 @@ bench::bench_time({
     id <- rlang::hash(list(grouping[i, c("model_id", "date")],  tg))
     new_id <- rlang::hash(list(group,  tg))
     
-    if (!prov_has(id, prov_df, "prov") | !prov_has(new_id, prov_df, "new_id")) {
-        bucket <- 
+    if (! (prov_has(id, prov_df, "prov") ||
+           prov_has(new_id, prov_df, "new_id"))
+       ) {
+        message(paste(i, group[i,1:2], "\n"))
         fc <- get_fcst_arrow(endpoint, "neon4cast-forecasts", theme, group)
         fc |> 
         filter(!is.na(family)) |> #hhhmmmm? what should we be doing about these forecasts?
