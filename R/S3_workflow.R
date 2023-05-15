@@ -27,7 +27,7 @@ score_theme <- function(theme,
 ){
   
   prov_download(s3_prov, local_prov)
-  prov_df <- readr::read_csv(local_prov, show_col_types = FALSE)
+  prov_df <- readr::read_csv(local_prov, col_types = "cc")
   on.exit(prov_upload(s3_prov, local_prov))
   
   s3_scores_path <- s3_scores$path(glue::glue("parquet/{theme}", theme=theme))
@@ -172,7 +172,9 @@ prov_download <- function(s3_prov, local_prov = "scoring_provenance.csv") {
 }
 
 prov_upload <- function(s3_prov, local_prov = "scoring_provenance.csv") {
-  prov <- arrow::open_dataset(local_prov, format="csv")
+  prov <- arrow::open_dataset(local_prov, format="csv",
+                              schema = arrow::schema(prov = arrow::string(),
+                                            new_id = arrow::string()))
   path <- s3_prov$path(local_prov)
   prov <- arrow::write_csv_arrow(prov, path)
 }
