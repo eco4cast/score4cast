@@ -30,14 +30,16 @@ score_theme <- function(theme,
   prov_df <- readr::read_csv(local_prov, show_col_types = FALSE)
   on.exit(prov_upload(s3_prov, local_prov))
   
-  
   s3_scores_path <- s3_scores$path(glue::glue("parquet/{theme}", theme=theme))
   
   timing <- bench::bench_time({
     
     target <- get_target(theme, s3_targets)
     
-    s3_inv <- arrow::s3_bucket("neon4cast-inventory",  endpoint_override = "data.ecoforecast.org", anonymous=TRUE)
+    # hardwired, not portable yet
+    s3_inv <- arrow::s3_bucket("neon4cast-inventory", 
+                               endpoint_override = "data.ecoforecast.org",
+                               anonymous=TRUE)
     grouping <- get_grouping(s3_inv, theme, collapse = TRUE)
 
     n <- nrow(grouping)
@@ -80,8 +82,9 @@ score_group <- function(i, grouping, fc, target,
   
   ## If group$date is in future, we always need to rescore it to accumulate
   ## most recent reference_datetimes in forecast
-  if (!prov_has(id, prov_df, "prov") | !prov_has(new_id, prov_df, "new_id")) {
-
+  if ( !(prov_has(id, prov_df, "prov") || 
+         prov_has(new_id, prov_df, "new_id")) ) 
+  {
     fc <- get_fcst_arrow(endpoint, bucket, theme, group)
     fc |> 
       filter(!is.na(family)) |> #hhhmmmm? what should we be doing about these forecasts?
