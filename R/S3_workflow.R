@@ -36,6 +36,7 @@ score_theme <- function(theme,
   on.exit(prov_upload(s3_prov, local_prov))
   
   s3_scores_path <- s3_scores$path(glue::glue("parquet/{theme}", theme=theme))
+  bucket <- "neon4cast-forecasts/"
   
   timing <- bench::bench_time({
     target <- get_target(theme, s3_targets)
@@ -43,7 +44,7 @@ score_theme <- function(theme,
     pb <- progress::progress_bar$new(format=
       glue::glue("  scoring {theme} [:bar] :percent in :elapsed, eta: :eta"),
       total = nrow(grouping), clear = FALSE, width= 80)
-    parallel::mclapply(1:n, score_group, grouping, fc, target, prov_df,
+    parallel::mclapply(1:n, score_group, grouping, bucket, target, prov_df,
                        local_prov, s3_scores_path, pb, endpoint)
 
    })
@@ -56,7 +57,7 @@ score_theme <- function(theme,
 # ex <- score_group(1, grouping, fc, target, prov_df, local_prov, s3_scores_path, pb)
 
 score_group <- function(i, grouping, 
-                        fc, target, prov_df, local_prov,
+                        bucket, target, prov_df, local_prov,
                         s3_scores_path, pb, endpoint) { 
   pb$tick()
   group <- grouping[i,]
@@ -184,3 +185,7 @@ get_fcst_arrow <- function(endpoint, bucket, theme, group) {
     dplyr::collect()
 }
 
+
+globalVariables(c("...1", "...2", "...3", "...4", "...5", 
+                  "add_filename", "theme", "n"), 
+                package="score4cast")
