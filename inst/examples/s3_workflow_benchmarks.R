@@ -14,18 +14,17 @@ s3_scores <- arrow::s3_bucket("neon4cast-scores", endpoint_override = endpoint)
 s3_prov <- arrow::s3_bucket("neon4cast-prov", endpoint_override = endpoint)
 
 
-theme = "aquatics"
+theme = "ticks"
 local_prov =  paste0(theme, "-scoring-prov.csv")
 
 prov_download(s3_prov, local_prov)
-prov_df <- readr::read_csv(local_prov, show_col_types = FALSE)
+prov_df <- readr::read_csv(local_prov, col_types = "cc")
 s3_scores_path <- s3_scores$path(glue::glue("parquet/{theme}", theme=theme))
 target <- get_target(theme, s3_targets)
 
 grouping <- get_grouping(s3_inv, theme, collapse = TRUE)
 
 ## benchmark on a subset:
-grouping <- grouping |> filter(model_id == "cb_prophet")
 n <- nrow(grouping)
 
 pb <- progress::progress_bar$new(
@@ -38,7 +37,7 @@ pb <- progress::progress_bar$new(
 # parallel::mclapply(1:n, score_group, grouping, fc, target, prov_df, local_prov, s3_scores_path, pb)
 
 bench::bench_time({
-  for (i in 1:n) { 
+  for (i in seq_along(grouping[[1]])) { 
   #furrr::future_map(1:n, function(i) {  
     ## this is the score_group() function:
     pb$tick()
@@ -70,7 +69,4 @@ bench::bench_time({
     }
   }
 })
-
-
-## arrow method is a bit slow
 

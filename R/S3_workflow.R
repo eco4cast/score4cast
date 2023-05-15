@@ -17,13 +17,18 @@
 #' @param s3_prov a connection from [arrow::s3_bucket]
 #' @param local_prov path to local csv file which will be used to 
 #' store provenance until theme is finished scoring.
+#' @param endpoint endpoint must be passed explicitly for s3_forecast bucket
+#' @param s3_inv parquet-based  S3 inventory of forecast filepaths
 #' @export
 score_theme <- function(theme, 
                         s3_forecasts, 
                         s3_targets, 
                         s3_scores, 
                         s3_prov,
-                        local_prov =  paste0(theme, "-scoring-prov.csv")
+                        local_prov =  paste0(theme, "-scoring-prov.csv"),
+                        endpoint = "data.ecoforecast.org",
+                        s3_inv = arrow::s3_bucket("neon4cast-inventory", 
+                                                   endpoint_override = endpoint)
 ){
   
   prov_download(s3_prov, local_prov)
@@ -33,28 +38,15 @@ score_theme <- function(theme,
   s3_scores_path <- s3_scores$path(glue::glue("parquet/{theme}", theme=theme))
   
   timing <- bench::bench_time({
-    
     target <- get_target(theme, s3_targets)
-    
-    # hardwired, not portable yet
-    s3_inv <- arrow::s3_bucket("neon4cast-inventory", 
-                               endpoint_override = "data.ecoforecast.org",
-                               anonymous=TRUE)
-    grouping <- get_grouping(s3_inv, theme, collapse = TRUE)
-
-    n <- nrow(grouping)
-    
-    pb <- progress::progress_bar$new(
-      format = glue::glue("  scoring {theme} [:bar] :percent in :elapsed,",
-                          " eta: :eta"),
-      total = n, 
-      clear = FALSE, width= 80)  
-    #for (i in 1:n) { pb$tick }
+    grouping <- get_grouping(s3_inv, theme,  collapse=TRUE, endpoint=endpoint)
+    pb <- progress::progress_bar$new(format=
+      glue::glue("  scoring {theme} [:bar] :percent in :elapsed, eta: :eta"),
+      total = nrow(grouping), clear = FALSE, width= 80)
     parallel::mclapply(1:n, score_group, grouping, fc, target, prov_df,
-                       local_prov, s3_scores_path, pb)
+                       local_prov, s3_scores_path, pb, endpoint)
 
    })
-  
   ## now sync prov back to S3 -- overwrites
   prov_upload(s3_prov, local_prov)
   timing
@@ -63,11 +55,10 @@ score_theme <- function(theme,
 
 # ex <- score_group(1, grouping, fc, target, prov_df, local_prov, s3_scores_path, pb)
 
-score_group <- function(i, grouping, fc, target,
-                        prov_df, local_prov, s3_scores_path, pb) { 
-  
+score_group <- function(i, grouping, 
+                        fc, target, prov_df, local_prov,
+                        s3_scores_path, pb, endpoint) { 
   pb$tick()
-  
   group <- grouping[i,]
   ref <- lubridate::as_datetime(group$date)
   
@@ -76,12 +67,9 @@ score_group <- function(i, grouping, fc, target,
   tg <- target |>
     filter(datetime >= ref, datetime < ref+lubridate::days(1))
   
-  ## ID changes only if target has changed between dates for this group
   id <- rlang::hash(list(grouping[i, c("model_id", "date")],  tg))
   new_id <- rlang::hash(list(group,  tg))
-  
-  ## If group$date is in future, we always need to rescore it to accumulate
-  ## most recent reference_datetimes in forecast
+
   if ( !(prov_has(id, prov_df, "prov") || 
          prov_has(new_id, prov_df, "new_id")) ) 
   {
@@ -91,14 +79,10 @@ score_group <- function(i, grouping, fc, target,
       crps_logs_score(tg) |>
       mutate(date = group$date) |>
       arrow::write_dataset(s3_scores_path,
-                           partitioning = c("model_id",
-                                            "date"))
-    
+                           partitioning = c("model_id", "date"))
     prov_add(new_id, local_prov)
   }
 }
-
-
 
 get_grouping <- function(s3_inv, theme,
                          collapse=TRUE, 
