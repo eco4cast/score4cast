@@ -25,6 +25,7 @@ get_fcst <- function(conn, endpoint, bucket, theme, group) {
   fc_i
 }
 
+
 bench::bench_time( # 5.46 sec
   fc <- get_fcst(conn, endpoint, bucket, theme, group)
 )
@@ -38,6 +39,9 @@ fc_i <- paste0("s3://", bucket, "parquet/", theme,
   arrow::open_dataset(schema=forecast_schema()) |> 
   collect()
 })
+
+
+
 
 ## S3 can use a wildcard but it is much slower!
 parquet_s3 <-  paste0("'", "s3://", bucket, "parquet/", theme,
@@ -53,4 +57,6 @@ view_query <-glue::glue("CREATE VIEW '{tblname}' ",
 DBI::dbSendQuery(conn, view_query)
 fc_i <- tbl(conn, tblname) |> collect()
 DBI::dbSendQuery(conn, glue::glue("DROP VIEW {tblname}"))
+
+
 

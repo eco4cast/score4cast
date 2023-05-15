@@ -36,9 +36,10 @@ score_theme <- function(theme,
   timing <- bench::bench_time({
     
     target <- get_target(theme, s3_targets)
-    fc_path <- s3_forecasts$path(glue::glue("parquet/{theme}"))
-    fc <- arrow::open_dataset(fc_path, schema=forecast_schema())
-    grouping <- get_grouping(fc_path)
+    
+    s3_inv <- arrow::s3_bucket("neon4cast-inventory",  endpoint_override = "data.ecoforecast.org", anonymous=TRUE)
+    grouping <- get_grouping(s3_inv, theme, collapse = TRUE)
+
     n <- nrow(grouping)
     
     pb <- progress::progress_bar$new(
@@ -74,68 +75,67 @@ score_group <- function(i, grouping, fc, target,
     filter(datetime >= ref, datetime < ref+lubridate::days(1))
   
   ## ID changes only if target has changed between dates for this group
-  
-  
-  id <- rlang::hash(list(group,  tg))
+  id <- rlang::hash(list(grouping[i, c("model_id", "date")],  tg))
+  new_id <- rlang::hash(list(group,  tg))
   
   ## If group$date is in future, we always need to rescore it to accumulate
   ## most recent reference_datetimes in forecast
-  if (!prov_has(id, prov_df) | Sys.Date() < ref) {
+  if (!prov_has(id, prov_df, "prov") | !prov_has(new_id, prov_df, "new_id")) {
 
-    fc_i <- fc |> 
-      dplyr::filter(model_id == group$model_id, 
-                    date == group$date) |> 
-      dplyr::collect()
-    
-    fc_i |> 
-      filter(!is.na(family)) |>
+    fc <- get_fcst_arrow(endpoint, bucket, theme, group)
+    fc |> 
+      filter(!is.na(family)) |> #hhhmmmm? what should we be doing about these forecasts?
       crps_logs_score(tg) |>
       mutate(date = group$date) |>
       arrow::write_dataset(s3_scores_path,
                            partitioning = c("model_id",
                                             "date"))
-    prov_add(id, local_prov)
+    
+    prov_add(new_id, local_prov)
   }
 }
 
 
 
-get_grouping <- function(s3_inv, theme) {
+get_grouping <- function(s3_inv, theme,
+                         collapse=TRUE, 
+                         endpoint="data.ecoforecast.org") {
   
-  inv <- arrow::open_dataset(s3_inv$path("neon4cast-forecasts"))
-  inv |> 
-    filter(...1 == "parquet", ...2 == {theme}) |> 
-    select(model_id = ...3, reference_datetime = ...4, date = ...5) |>
-    mutate(model_id = gsub("model_id=", "", model_id),
+  groups <- arrow::open_dataset(s3_inv$path("neon4cast-forecasts")) |> 
+    dplyr::filter(...1 == "parquet", ...2 == {theme}) |> 
+    dplyr::select(model_id = ...3, reference_datetime = ...4, date = ...5) |>
+    dplyr::mutate(model_id = gsub("model_id=", "", model_id),
            reference_datetime = 
              gsub("reference_datetime=", "", reference_datetime),
            date = gsub("date=", "", date)) |>
-    collect() |>
+    dplyr::collect()
+  
+  if(!collapse)
+    groups <- groups |>
+    mutate(s3 = paste0("s3://neon4cast-forecasts/parquet/", theme,
+                       "/model_id=", model_id,
+                       "/reference_datetime=",reference_datetime,
+                       "/date=", date, "/part-0.parquet",
+                       "?endpoint_override=", endpoint),
+           https = paste0("https://", endpoint,
+                          "/neon4cast-forecasts/parquet/", theme,
+                          "/model_id=", model_id,
+                          "/reference_datetime=",reference_datetime,
+                          "/date=", date, "/part-0.parquet"),
+    )
+  
+  if(!collapse) return(groups)
+  
+  # otherwise collapse down by reference_datetime
+  groups |>
     group_by(model_id, date) |> 
-    summarize(reference_datetime = paste(reference_datetime, collapse=", "),
+    dplyr::summarise(reference_datetime = 
+                       paste(reference_datetime, collapse=", "),
               .groups = "drop")
   
 }
   
 
-
-## deprecated, even ls-based method is too slow
-get_grouping_ls <- function(s3) {
-  
-  ## file-path version of:
-  #  arrow::open_dataset(s3) |> dplyr::distinct(model_id, date) |>
-  # dplyr::collect() 
-  
-  models <- stringr::str_remove(basename(s3$ls()), "model_id=")
-  out <- purrr::map_dfr(models, function(model_id) {
-    date <- glue::glue("model_id={model_id}") |>
-      s3$ls(recursive=TRUE) |> 
-      stringr::str_match("date=(\\d{4}-\\d{2}-\\d{2})")
-    date <- stats::na.omit(date[,2])
-    tibble::tibble(model_id,date)
-  })
-  dplyr::distinct(out)
-}
 
 
 get_target <- function(theme, s3) {
@@ -145,21 +145,15 @@ get_target <- function(theme, s3) {
 }
 
 
-
-
 ## NOTE cannot append to *remote* S3 sources, so prov_has / prov_add must work local and sync.
-
-prov_has <- function(id, prov) {
+prov_has <- function(id, prov, colname="prov") {
   ## would be fast even with remote file
-  prov |> dplyr::filter(prov == id) |> nrow() >= 1
+  prov |> dplyr::filter(.data[[colname]] == id) |> nrow() >= 1
 }
 
 prov_add <- function(id, local_prov = "scoring_provenance.csv") {
-  new_prov <-  dplyr::tibble(prov=id)
-  
-  ## Cannot append w/o using low-level interface
-  #arrow::write_csv_arrow(new_prov, s3_prov$path(local_prov), append=TRUE)
-  
+  new_prov <-  dplyr::tibble(prov=NA_integer_, new_id=id)
+  ## Can never append to S3-hosted objects
   readr::write_csv(new_prov, local_prov, append=TRUE)
 }
 
@@ -180,4 +174,24 @@ prov_upload <- function(s3_prov, local_prov = "scoring_provenance.csv") {
   prov <- arrow::write_csv_arrow(prov, path)
 }
 
+## arrow method is a bit slower?
+get_fcst_arrow <- function(endpoint, bucket, theme, group) {
+  paste0("s3://", fs::path(bucket, "parquet/", theme),
+         "/model_id=", group$model_id, "/reference_datetime=",
+         stringi::stri_split_fixed(group$reference_datetime, ", ")[[1]],
+         "/date=", group$date, "/part-0.parquet",
+         "?endpoint_override=", endpoint) |> 
+    arrow::open_dataset() |> 
+    dplyr::mutate(file = add_filename(),
+                  model_id = 
+                    gsub(".*model_id=(\\w+).*", "\\1", file),
+                  reference_datetime = 
+                    gsub(".*reference_datetime=(\\d{4}-\\d{2}-\\d{2}).*",
+                         "\\1", file),
+                  date = 
+                    gsub(".*date=(\\d{4}-\\d{2}-\\d{2}).*", "\\1", file)
+    ) |>
+    dplyr::filter(!is.na(family)) |>
+    dplyr::collect()
+}
 
