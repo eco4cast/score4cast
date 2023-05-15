@@ -44,8 +44,10 @@ score_theme <- function(theme,
     pb <- progress::progress_bar$new(format=
       glue::glue("  scoring {theme} [:bar] :percent in :elapsed, eta: :eta"),
       total = nrow(grouping), clear = FALSE, width= 80)
-    parallel::mclapply(1:n, score_group, grouping, bucket, target, prov_df,
-                       local_prov, s3_scores_path, pb, endpoint)
+    parallel::mclapply(seq_along(grouping[[1]]), score_group,
+                       grouping, bucket, target, prov_df,
+                       local_prov, s3_scores_path, pb, theme,
+                       endpoint)
 
    })
   ## now sync prov back to S3 -- overwrites
@@ -58,7 +60,7 @@ score_theme <- function(theme,
 
 score_group <- function(i, grouping, 
                         bucket, target, prov_df, local_prov,
-                        s3_scores_path, pb, endpoint) { 
+                        s3_scores_path, pb, theme, endpoint) { 
   pb$tick()
   group <- grouping[i,]
   ref <- lubridate::as_datetime(group$date)
@@ -85,7 +87,8 @@ score_group <- function(i, grouping,
   }
 }
 
-get_grouping <- function(s3_inv, theme,
+get_grouping <- function(s3_inv, 
+                         theme,
                          collapse=TRUE, 
                          endpoint="data.ecoforecast.org") {
   
