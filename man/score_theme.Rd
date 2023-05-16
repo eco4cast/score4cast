@@ -10,7 +10,9 @@ score_theme(
   s3_targets,
   s3_scores,
   s3_prov,
-  local_prov = paste0(theme, "-scoring-prov.csv")
+  local_prov = paste0(theme, "-scoring-prov.csv"),
+  endpoint = "data.ecoforecast.org",
+  s3_inv = arrow::s3_bucket("neon4cast-inventory", endpoint_override = endpoint)
 )
 }
 \arguments{
@@ -27,6 +29,10 @@ This connection requires write access, e.g. by specifying}
 
 \item{local_prov}{path to local csv file which will be used to
 store provenance until theme is finished scoring.}
+
+\item{endpoint}{endpoint must be passed explicitly for s3_forecast bucket}
+
+\item{s3_inv}{parquet-based  S3 inventory of forecast filepaths}
 }
 \description{
 A helper utility to score a collection of forecasts efficiently

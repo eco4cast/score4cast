@@ -22,7 +22,6 @@ Imports:
     dplyr,
     ISOweek,
     scoringRules,
-    stringr,
     tidyr,
     forcats,
     rlang,
@@ -32,7 +31,9 @@ Imports:
     cpp11,
     parallel,
     brio,
-    read4cast (>= 0.0.0.9000)
+    read4cast (>= 0.0.0.9000),
+    fs,
+    stringi
 Suggests:
     bench,
     glue,
