@@ -174,7 +174,7 @@ get_fcst_arrow <- function(endpoint, bucket, theme, group) {
          stringi::stri_split_fixed(group$reference_datetime, ", ")[[1]],
          "/date=", group$date, "/part-0.parquet",
          "?endpoint_override=", endpoint) |> 
-    arrow::open_dataset() |> 
+    arrow::open_dataset(schema=forecast_schema()) |> 
     dplyr::mutate(file = add_filename(),
                   model_id = 
                     gsub(".*model_id=(\\w+).*", "\\1", file),
