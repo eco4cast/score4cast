@@ -173,7 +173,8 @@ get_fcst_arrow <- function(endpoint, bucket, theme, group) {
          "/model_id=", group$model_id, "/reference_datetime=",
          stringi::stri_split_fixed(group$reference_datetime, ", ")[[1]],
          "/date=", group$date, "/part-0.parquet",
-         "?endpoint_override=", endpoint) |> 
+         "?endpoint_override=", endpoint) |>
+    utils::URLencode() |>
     arrow::open_dataset(schema=forecast_schema()) |> 
     dplyr::mutate(file = add_filename(),
                   model_id = 
