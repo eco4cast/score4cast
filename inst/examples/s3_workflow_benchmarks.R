@@ -14,7 +14,7 @@ s3_scores <- arrow::s3_bucket("neon4cast-scores", endpoint_override = endpoint)
 s3_prov <- arrow::s3_bucket("neon4cast-prov", endpoint_override = endpoint)
 
 
-theme = "ticks"
+theme = "terrestrial_30min"
 local_prov =  paste0(theme, "-scoring-prov.csv")
 
 prov_download(s3_prov, local_prov)
@@ -35,12 +35,24 @@ pb <- progress::progress_bar$new(
 
 # this for loop is the same as:
 # parallel::mclapply(1:n, score_group, grouping, fc, target, prov_df, local_prov, s3_scores_path, pb)
+conn <- DBI::dbConnect(duckdb::duckdb(), ":memory:")
 
-bench::bench_time({
-  for (i in seq_along(grouping[[1]])) { 
-  #furrr::future_map(1:n, function(i) {  
-    ## this is the score_group() function:
-    pb$tick()
+group_indices <- seq_along(grouping[[1]])
+group_indices <- group_indices[group_indices >=i]
+
+pb <- progress::progress_bar$new(
+  format = glue::glue("  scoring {theme} [:bar] :percent in :elapsed,",
+                      " eta: :eta"),
+  total = length(group_indices), 
+  clear = FALSE, width= 80)
+
+  #for (i in group_indices) { 
+library(future)
+plan(multisession, workers = 12)
+
+#  furrr::future_map(1:n, function(i) {  
+for(i in group_indices) {
+     pb$tick()
     group <- grouping[i,]
     ref <- lubridate::as_datetime(group$date)
     
@@ -56,8 +68,8 @@ bench::bench_time({
     if (! (prov_has(id, prov_df, "prov") ||
            prov_has(new_id, prov_df, "new_id"))
        ) {
-        message(paste(i, group[i,1:2], "\n"))
-        fc <- get_fcst_arrow(endpoint, "neon4cast-forecasts", theme, group)
+        # message(paste(i, group[[1]], group[[2]], "\n"))
+        fc <- get_fcst_duckdb_s3(conn, endpoint, "neon4cast-forecasts", theme, group)
         fc |> 
         filter(!is.na(family)) |> #hhhmmmm? what should we be doing about these forecasts?
         crps_logs_score(tg) |>
@@ -68,5 +80,54 @@ bench::bench_time({
       prov_add(new_id, local_prov)
     }
   }
-})
+#, .progress = TRUE)
+
+
+get_fcst_duckdb <- function(conn, endpoint, bucket, theme, group) {
+  
+  DBI::dbExecute(conn, "INSTALL 'httpfs';")
+  DBI::dbExecute(conn, "LOAD 'httpfs';")
+  
+  parquet <- 
+    paste0("[", paste0(paste0("'",
+                              "https://", endpoint, "/", bucket, "/parquet/", theme,
+                              "/model_id=", group$model_id, "/reference_datetime=",
+                              stringi::stri_split_fixed(group$reference_datetime, ", ")[[1]],
+                              "/date=", group$date, "/part-0.parquet", "'"), collapse = ","),
+           "]")
+  
+  tblname <- "forecast_subset"
+  view_query <-glue::glue("CREATE VIEW '{tblname}' ", 
+                          "AS SELECT * FROM parquet_scan({parquet}, HIVE_PARTITIONING=true);")
+  DBI::dbSendQuery(conn, view_query)
+  fc_i <- dplyr::tbl(conn, tblname) |> dplyr::collect()
+  DBI::dbSendQuery(conn, glue::glue("DROP VIEW {tblname}"))
+  fc_i
+}
+
+
+
+get_fcst_duckdb_s3 <- function(conn, endpoint, bucket, theme, group) {
+  
+  DBI::dbExecute(conn, "INSTALL 'httpfs';")
+  DBI::dbExecute(conn, "LOAD 'httpfs';")
+  DBI::dbExecute(conn, glue::glue("SET s3_endpoint='{endpoint}';"))
+  DBI::dbExecute(conn, glue::glue("SET s3_url_style='path';"))
+  parquet <- 
+    paste0("[", paste0(paste0("'",
+                              "s3://", bucket, "/parquet/", theme,
+                              "/model_id=", group$model_id, "/reference_datetime=",
+                              stringi::stri_split_fixed(group$reference_datetime, ", ")[[1]],
+                              "/date=", group$date, "/part-0.parquet", "'"), collapse = ","),
+           "]")
+  
+  tblname <- "forecast_subset"
+  view_query <-glue::glue("CREATE VIEW '{tblname}' ", 
+                          "AS SELECT * FROM parquet_scan({parquet}, HIVE_PARTITIONING=true);")
+  DBI::dbSendQuery(conn, view_query)
+  fc_i <- dplyr::tbl(conn, tblname) |> dplyr::collect()
+  DBI::dbSendQuery(conn, glue::glue("DROP VIEW {tblname}"))
+  fc_i
+}
+
 

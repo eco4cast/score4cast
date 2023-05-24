@@ -36,22 +36,26 @@ score_theme <- function(theme,
   on.exit(prov_upload(s3_prov, local_prov))
   
   s3_scores_path <- s3_scores$path(glue::glue("parquet/{theme}", theme=theme))
-  bucket <- "neon4cast-forecasts/"
+  bucket <- s3_forecasts$base_path
+  conn <- DBI::dbConnect(duckdb::duckdb(), ":memory:")
   
   timing <- bench::bench_time({
+    
     target <- get_target(theme, s3_targets)
-    grouping <- get_grouping(s3_inv, theme,  collapse=TRUE, endpoint=endpoint)
+    grouping <- get_grouping(s3_inv, theme, collapse=TRUE,
+                             bucket=bucket, endpoint=endpoint)
     pb <- progress::progress_bar$new(format=
       glue::glue("  scoring {theme} [:bar] :percent in :elapsed, eta: :eta"),
       total = nrow(grouping), clear = FALSE, width= 80)
     parallel::mclapply(seq_along(grouping[[1]]), score_group,
                        grouping, bucket, target, prov_df,
                        local_prov, s3_scores_path, pb, theme,
-                       endpoint)
+                       endpoint, conn)
 
    })
   ## now sync prov back to S3 -- overwrites
   prov_upload(s3_prov, local_prov)
+  
   timing
 }
 
@@ -60,7 +64,7 @@ score_theme <- function(theme,
 
 score_group <- function(i, grouping, 
                         bucket, target, prov_df, local_prov,
-                        s3_scores_path, pb, theme, endpoint) { 
+                        s3_scores_path, pb, theme, endpoint, conn) { 
   pb$tick()
   group <- grouping[i,]
   ref <- lubridate::as_datetime(group$date)
@@ -76,7 +80,7 @@ score_group <- function(i, grouping,
   if ( !(prov_has(id, prov_df, "prov") || 
          prov_has(new_id, prov_df, "new_id")) ) 
   {
-    fc <- get_fcst_arrow(endpoint, bucket, theme, group)
+    fc <- get_fcst_duckdb_s3(conn, endpoint, bucket, theme, group)
     fc |> 
       filter(!is.na(family)) |> #hhhmmmm? what should we be doing about these forecasts?
       crps_logs_score(tg) |>
@@ -90,9 +94,10 @@ score_group <- function(i, grouping,
 get_grouping <- function(s3_inv, 
                          theme,
                          collapse=TRUE, 
+                         bucket="neon4cast-forecasts",
                          endpoint="data.ecoforecast.org") {
   
-  groups <- arrow::open_dataset(s3_inv$path("neon4cast-forecasts")) |> 
+  groups <- arrow::open_dataset(s3_inv$path(bucket)) |> 
     dplyr::filter(...1 == "parquet", ...2 == {theme}) |> 
     dplyr::select(model_id = ...3, reference_datetime = ...4, date = ...5) |>
     dplyr::mutate(model_id = gsub("model_id=", "", model_id),
@@ -103,13 +108,13 @@ get_grouping <- function(s3_inv,
   
   if(!collapse)
     groups <- groups |>
-    mutate(s3 = paste0("s3://neon4cast-forecasts/parquet/", theme,
+    mutate(s3 = paste0("s3://", bucket, "/parquet/", theme,
                        "/model_id=", model_id,
                        "/reference_datetime=",reference_datetime,
                        "/date=", date, "/part-0.parquet",
                        "?endpoint_override=", endpoint),
            https = paste0("https://", endpoint,
-                          "/neon4cast-forecasts/parquet/", theme,
+                          "/", bucket, "/parquet/", theme,
                           "/model_id=", model_id,
                           "/reference_datetime=",reference_datetime,
                           "/date=", date, "/part-0.parquet"),
@@ -171,8 +176,13 @@ prov_upload <- function(s3_prov, local_prov = "scoring_provenance.csv") {
 get_fcst_arrow <- function(endpoint, bucket, theme, group) {
   paste0("s3://", fs::path(bucket, "parquet/", theme),
          "/model_id=", group$model_id, "/reference_datetime=",
-         utils::URLencode(utils::URLdecode(
-           stringi::stri_split_fixed(group$reference_datetime, ", ")[[1]])),
+         
+         ## reference datetimes might be 'fully URL encoded', (no spaces or :)
+         ## Or might be encoded without encoding 'reserved characters' (like : or /)
+         ## For standardization purposes, we decode fully, and then encode spaces but not reserved characters
+         ## I believe this allows arrow to read both ref datetimes in all encoding permutations
+         utils::URLencode(
+           stringi::stri_split_fixed(group$reference_datetime, ", ")[[1]]),
          "/date=", group$date, "/part-0.parquet",
          "?endpoint_override=", endpoint) |>
     arrow::open_dataset(schema=forecast_schema()) |> 
@@ -188,6 +198,34 @@ get_fcst_arrow <- function(endpoint, bucket, theme, group) {
     dplyr::filter(!is.na(family)) |>
     dplyr::collect()
 }
+
+
+
+get_fcst_duckdb_s3 <- function(conn, endpoint, bucket, theme, group) {
+  
+  DBI::dbExecute(conn, "INSTALL 'httpfs';")
+  DBI::dbExecute(conn, "LOAD 'httpfs';")
+  DBI::dbExecute(conn, glue::glue("SET s3_endpoint='{endpoint}';"))
+  DBI::dbExecute(conn, glue::glue("SET s3_url_style='path';"))
+  parquet <- 
+    paste0("[", paste0(paste0("'",
+                              "s3://", bucket, "/parquet/", theme,
+                              "/model_id=", group$model_id, "/reference_datetime=",
+                              stringi::stri_split_fixed(group$reference_datetime, ", ")[[1]],
+                              "/date=", group$date, "/part-0.parquet", "'"), collapse = ","),
+           "]")
+  
+  tblname <- "forecast_subset"
+  view_query <-glue::glue("CREATE VIEW '{tblname}' ", 
+                          "AS SELECT * FROM parquet_scan({parquet}, HIVE_PARTITIONING=true);")
+  DBI::dbSendQuery(conn, view_query)
+  fc_i <- dplyr::tbl(conn, tblname) |> dplyr::collect()
+  DBI::dbSendQuery(conn, glue::glue("DROP VIEW {tblname}"))
+  fc_i
+}
+
+
+
 
 
 globalVariables(c("...1", "...2", "...3", "...4", "...5", 

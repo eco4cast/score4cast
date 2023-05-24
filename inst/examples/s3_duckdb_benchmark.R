@@ -1,13 +1,13 @@
 library(duckdb)
 library(glue)
 
-conn <- DBI::dbConnect(duckdb(), ":memory:")
-DBI::dbExecute(conn, "INSTALL 'httpfs';")
-DBI::dbExecute(conn, "LOAD 'httpfs';")
-
-
 
 get_fcst <- function(conn, endpoint, bucket, theme, group) {
+  
+  conn <- DBI::dbConnect(duckdb(), ":memory:")
+  DBI::dbExecute(conn, "INSTALL 'httpfs';")
+  DBI::dbExecute(conn, "LOAD 'httpfs';")
+  
   parquet <- 
     paste0("[", paste0(paste0("'",
            "https://", endpoint, "/", bucket, "parquet/", theme,
@@ -20,7 +20,7 @@ get_fcst <- function(conn, endpoint, bucket, theme, group) {
   view_query <-glue::glue("CREATE VIEW '{tblname}' ", 
                     "AS SELECT * FROM parquet_scan({parquet}, HIVE_PARTITIONING=true);")
   DBI::dbSendQuery(conn, view_query)
-  fc_i <- tbl(conn, tblname) |> collect()
+  fc_i <- dplyr::tbl(conn, tblname) |> dplyr::collect()
   DBI::dbSendQuery(conn, glue::glue("DROP VIEW {tblname}"))
   fc_i
 }
