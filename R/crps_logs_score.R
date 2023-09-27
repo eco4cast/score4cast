@@ -7,6 +7,7 @@
 #' normal distribution. (Support for additional distributions to come.)
 #' @param forecast a forecast data.frame in long EFI-standard format
 #' @param target a target data.frame in long EFI-standard format
+#' @param extra_groups character vector of additional groups to use for scoring
 #' @export
 crps_logs_score <- function(forecast, target, extra_groups = NULL) {
   
