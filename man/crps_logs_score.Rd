@@ -4,12 +4,14 @@
 \alias{crps_logs_score}
 \title{crps_logs_score}
 \usage{
-crps_logs_score(forecast, target)
+crps_logs_score(forecast, target, extra_groups = NULL)
 }
 \arguments{
 \item{forecast}{a forecast data.frame in long EFI-standard format}
 
 \item{target}{a target data.frame in long EFI-standard format}
+
+\item{extra_groups}{character vector of additional groups to use for scoring}
 }
 \description{
 Compute the CRPS and LOGS score given a forecast in either ensemble or

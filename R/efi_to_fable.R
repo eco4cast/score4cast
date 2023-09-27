@@ -64,7 +64,18 @@ log_score <- function(.dist, .actual, ...) {
   switch(fam,
          normal = scoringRules::logs_norm(.actual, mean = par$mu, sd = par$sigma),
          lognormal = scoringRules::logs_lnorm(.actual, mean = par$mu, sd = par$sigma),
+         bernoulli = scoringRules::logs_binom(.actual,  size = 1, prob = par$prob),
+         beta = scoringRules::logs_beta(y, shape1 = par$shape1, shape1 = par$shape2),
+         uniform = scoringRules::logs_unif(y, min = par$min, max = par$max),
+         gamma = scoringRules::logs_gamma(y, shape = par$shape, rate = par$rate),
+         logistic = scoringRules::logs_logis(y, location = par$location, scale = par$scale),
+         exponential = scoringRules::logs_exp(y, rate = par$rate),
+         poisson = scoringRules::logs_pois(y, lambda = par$lambda),
          sample = scoringRules::logs_sample(.actual, dat = unlist(par$x))
+         
+         
+         
+         
   )
 }
 
