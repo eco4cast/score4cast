@@ -8,19 +8,19 @@
 #' @param forecast a forecast data.frame in long EFI-standard format
 #' @param target a target data.frame in long EFI-standard format
 #' @export
-crps_logs_score <- function(forecast, target) {
+crps_logs_score <- function(forecast, target, extra_groups = NULL) {
   
   target <- target |>
     standardize_target() |> 
-    dplyr::select("datetime", "site_id", "variable", "observation")
+    dplyr::select(dplyr::any_of(c("datetime", "site_id", "variable", "observation", extra_groups)))
   
   # no longer run full 'standardize' call here.
   joined <- forecast |> recode("family", from="ensemble", to="sample") |>
-    dplyr::left_join(target, by = c("site_id", "datetime", "variable"))
+    dplyr::left_join(target, by = c("site_id", "datetime", "variable", extra_groups))
   
   # use with across(any_of()) to avoid bare names; allows optional terms
   grouping <- c("model_id", "reference_datetime", "site_id", 
-                "datetime", "family", "variable", "pubDate")
+                "datetime", "family", "variable", "pubDate", extra_groups)
   
   scores <- joined |> 
       dplyr::group_by(dplyr::across(dplyr::any_of(grouping))) |> 
