@@ -31,13 +31,13 @@ crps_logs_score <- function(forecast, target) {
         dist = infer_dist(family, parameter, prediction),
         .groups = "drop") |>
       dplyr::mutate(
-        mean = mean(dist),
-        median = stats::median(dist),
-        sd = sqrt(distributional::variance(dist)),
-        quantile97.5 = distributional::hilo(dist, 95)$upper,
-        quantile02.5 = distributional::hilo(dist, 95)$lower,
-        quantile90 = distributional::hilo(dist, 90)$upper,
-        quantile10 = distributional::hilo(dist, 90)$lower
+        mean = as.numeric(mean(dist)),
+        median = as.numeric(stats::median(dist)),
+        sd = sqrt(as.numeric(distributional::variance(dist))),
+        quantile97.5 = as.numeric(distributional::hilo(dist, 95)$upper),
+        quantile02.5 = as.numeric(distributional::hilo(dist, 95)$lower),
+        quantile90 = as.numeric(distributional::hilo(dist, 90)$upper),
+        quantile10 = as.numeric(distributional::hilo(dist, 90)$lower)
       ) |> dplyr::select(-dist)
  
  
@@ -56,6 +56,13 @@ generic_crps <- function(family, parameter, prediction, observation){
   switch(unique(as.character(family)),
          lognormal = scoringRules::crps_lnorm(y, prediction['mu'], prediction['sigma']),
          normal = scoringRules::crps_norm(y, prediction['mu'], prediction['sigma']),
+         bernoulli = scoringRules::crps_binom(y, size = 1, prediction['prob']),
+         beta = scoringRules::crps_beta(y, shape1 = prediction['shape1'], shape1 = prediction['shape2']),
+         uniform = scoringRules::crps_unif(y, min = prediction['min'], max = prediction['max']),
+         gamma = scoringRules::crps_gamma(y, shape = prediction['shape'], rate = prediction['rate']),
+         logistic = scoringRules::crps_logis(y, location = prediction['location'], scale = prediction['scale']),
+         exponential = scoringRules::crps_exp(y, rate = prediction['rate']),
+         poisson = scoringRules::crps_pois(y, lambda = prediction['lambda']),
          sample = scoringRules::crps_sample(y, prediction)
   ),
   error = function(e) NA_real_, finally = NA_real_)
@@ -69,6 +76,13 @@ generic_logs <- function(family, parameter, prediction, observation){
     switch(unique(as.character(family)),
            lognormal = scoringRules::logs_lnorm(y, prediction['mu'], prediction['sigma']),
            normal = scoringRules::logs_norm(y, prediction['mu'], prediction['sigma']),
+           bernoulli = scoringRules::logs_binom(y, size = 1, prediction['prob']),
+           beta = scoringRules::logs_beta(y, shape1 = prediction['shape1'], shape1 = prediction['shape2']),
+           uniform = scoringRules::logs_unif(y, min = prediction['min'], max = prediction['max']),
+           gamma = scoringRules::logs_gamma(y, shape = prediction['shape'], rate = prediction['rate']),
+           logistic = scoringRules::logs_logis(y, location = prediction['location'], scale = prediction['scale']),
+           exponential = scoringRules::logs_exp(y, rate = prediction['rate']),
+           poisson = scoringRules::logs_pois(y, lambda = prediction['lambda']),
            sample = scoringRules::logs_sample(y, prediction)
     ),
     error = function(e) NA_real_, finally = NA_real_)
