@@ -70,3 +70,30 @@ scores
 #> #   mean <dbl>, median <dbl>, sd <dbl>, quantile97.5 <dbl>, quantile02.5 <dbl>,
 #> #   quantile90 <dbl>, quantile10 <dbl>, horizon <drtn>
 ```
+
+```
+library(tidyverse)
+forecast <- tibble(datetime = as_date("2023-01-02"),
+             site_id = "fcre",
+             depth = c(1,2),
+             model_id = "test",
+             reference_datetime = as_date("2023-01-02"),
+             variable = "temp",
+             family = "bernoulli",
+             parameter = "prob",
+             prediction = c(0.3, 0.1))
+
+target <- tibble(datetime = as_date("2023-01-02"),
+             site_id = "fcre",
+             depth = c(1,2),
+             variable = "temp",
+             observation = c(1,0))
+
+score4cast::crps_logs_score(forecast,target, extra_groups = "depth")
+#> #A tibble: 2 × 17
+#>   model_id reference_datetime site_id datetime   family    variable depth observation   crps  logs  mean median    sd quantile97.5 quantile02.5
+#>   <chr>    <date>             <chr>   <date>     <chr>     <chr>    <dbl>       <dbl>  <dbl> <dbl> <dbl>  <dbl> <dbl>        <dbl>        <dbl>
+#> 1 test     2023-01-02         fcre    2023-01-02 bernoulli temp         1           1 0.49   1.20    0.3      0 0.458            1            0
+#> 2 test     2023-01-02         fcre    2023-01-02 bernoulli temp         2           0 0.0100 0.105   0.1      0 0.3              1            0
+#> # ℹ 2 more variables: quantile90 <dbl>, quantile10 <dbl>
+```
