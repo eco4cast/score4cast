@@ -70,8 +70,12 @@ scores
 #> #   quantile90 <dbl>, quantile10 <dbl>, horizon <drtn>
 ```
 
+
 ## Example using Bernoulli distribution and extra columns for grouping
 
+``` r
+library(tidyverse)
+```
 ``` r
 forecast <- tibble(datetime = as_date("2023-01-02"),
              site_id = "fcre",
