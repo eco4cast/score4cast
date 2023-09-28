@@ -47,3 +47,29 @@ source(ex_data)
 scores <- score(ex_forecast, ex_target)
 scores
 ```
+
+```{r echo = FALSE, message=FALSE}
+library(tidyverse)
+```
+
+## Example using Bernoulli distribution and extra columns for grouping
+
+```{r}
+forecast <- tibble(datetime = as_date("2023-01-02"),
+             site_id = "fcre",
+             depth = c(1,2),
+             model_id = "test",
+             reference_datetime = as_date("2023-01-02"),
+             variable = "temp",
+             family = "bernoulli",
+             parameter = "prob",
+             prediction = c(0.3, 0.1))
+
+target <- tibble(datetime = as_date("2023-01-02"),
+             site_id = "fcre",
+             depth = c(1,2),
+             variable = "temp",
+             observation = c(1,0))
+
+crps_logs_score(forecast,target, extra_groups = "depth")
+```
