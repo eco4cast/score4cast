@@ -68,7 +68,7 @@ summarize_forecast <- function(forecast, extra_groups = NULL) {
                 "datetime", "family", "variable", "pubDate", extra_groups)
   
   forecast |> 
-    dplyr::recode("family", from="ensemble", to="sample") |> 
+    dplyr::mutate(family = ifelse(family == "ensemble", "sample", family)) |> 
     dplyr::group_by(dplyr::across(dplyr::any_of(grouping))) |> 
     dplyr::summarise(dist = infer_dist(family, parameter, prediction),
                      .groups = "drop") |>
