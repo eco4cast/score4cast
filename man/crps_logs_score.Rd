@@ -4,7 +4,12 @@
 \alias{crps_logs_score}
 \title{crps_logs_score}
 \usage{
-crps_logs_score(forecast, target, extra_groups = NULL)
+crps_logs_score(
+  forecast,
+  target,
+  extra_groups = NULL,
+  include_summaries = TRUE
+)
 }
 \arguments{
 \item{forecast}{a forecast data.frame in long EFI-standard format}

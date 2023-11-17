@@ -9,7 +9,7 @@
 #' @param target a target data.frame in long EFI-standard format
 #' @param extra_groups character vector of additional groups to use for scoring
 #' @export
-crps_logs_score <- function(forecast, target, extra_groups = NULL) {
+crps_logs_score <- function(forecast, target, extra_groups = NULL, include_summaries = TRUE) {
   
   target <- target |>
     standardize_target() |> 
@@ -23,14 +23,16 @@ crps_logs_score <- function(forecast, target, extra_groups = NULL) {
   grouping <- c("model_id", "reference_datetime", "site_id", 
                 "datetime", "family", "variable", "pubDate", extra_groups)
   
-  scores <- joined |> 
+  if(include_summaries){
+    
+    scores <- joined |> 
       dplyr::group_by(dplyr::across(dplyr::any_of(grouping))) |> 
       dplyr::summarise(
         observation = unique(observation), # grouping vars define a unique obs
         crps = generic_crps(family, parameter, prediction, observation),
         logs = generic_logs(family, parameter, prediction, observation),
         dist = infer_dist(family, parameter, prediction),
-        .groups = "drop") |>
+        .groups = "drop") |> 
       dplyr::mutate(
         mean = as.numeric(mean(dist)),
         median = as.numeric(stats::median(dist)),
@@ -38,12 +40,50 @@ crps_logs_score <- function(forecast, target, extra_groups = NULL) {
         quantile97.5 = as.numeric(distributional::hilo(dist, 95)$upper),
         quantile02.5 = as.numeric(distributional::hilo(dist, 95)$lower),
         quantile90 = as.numeric(distributional::hilo(dist, 90)$upper),
-        quantile10 = as.numeric(distributional::hilo(dist, 90)$lower)
-      ) |> dplyr::select(-dist)
- 
- 
+        quantile10 = as.numeric(distributional::hilo(dist, 90)$lower)) |> 
+      dplyr::select(-dist)
+    
+  }else{
+    scores <- joined |> 
+      dplyr::group_by(dplyr::across(dplyr::any_of(grouping))) |> 
+      dplyr::summarise(
+        observation = unique(observation), # grouping vars define a unique obs
+        crps = generic_crps(family, parameter, prediction, observation),
+        logs = generic_logs(family, parameter, prediction, observation),
+        .groups = "drop")
+  }
   scores
 }
+
+#' summarize_forecast
+#' 
+#' Compute summaries of a forecast for ensemble and parametric forecasts
+#' @param forecast a forecast data.frame in long EFI-standard format
+#' @param extra_groups character vector of additional groups to use for grouping summaries
+#' @export
+summarize_forecast <- function(forecast, extra_groups = NULL) {
+  
+  # use with across(any_of()) to avoid bare names; allows optional terms
+  grouping <- c("model_id", "reference_datetime", "site_id", 
+                "datetime", "family", "variable", "pubDate", extra_groups)
+  
+  forecast |> 
+    dplyr::group_by(dplyr::across(dplyr::any_of(grouping))) |> 
+    dplyr::summarise(dist = infer_dist(family, parameter, prediction),
+                     .groups = "drop") |>
+    dplyr::mutate(
+      mean = as.numeric(mean(dist)),
+      median = as.numeric(stats::median(dist)),
+      sd = sqrt(as.numeric(distributional::variance(dist))),
+      quantile97.5 = as.numeric(distributional::hilo(dist, 95)$upper),
+      quantile02.5 = as.numeric(distributional::hilo(dist, 95)$lower),
+      quantile90 = as.numeric(distributional::hilo(dist, 90)$upper),
+      quantile10 = as.numeric(distributional::hilo(dist, 90)$lower)
+    ) |> dplyr::select(-dist)
+  
+}
+
+
 
 ## Naming conventions are based on `distributional` package:
 ## https://pkg.mitchelloharawild.com/distributional/reference/index.html
@@ -54,19 +94,19 @@ generic_crps <- function(family, parameter, prediction, observation){
   names(prediction) = parameter
   y <- dplyr::first(observation)
   tryCatch(
-  switch(unique(as.character(family)),
-         lognormal = scoringRules::crps_lnorm(y, prediction['mu'], prediction['sigma']),
-         normal = scoringRules::crps_norm(y, prediction['mu'], prediction['sigma']),
-         bernoulli = scoringRules::crps_binom(y, size = 1, prediction['prob']),
-         beta = scoringRules::crps_beta(y, shape1 = prediction['shape1'], shape1 = prediction['shape2']),
-         uniform = scoringRules::crps_unif(y, min = prediction['min'], max = prediction['max']),
-         gamma = scoringRules::crps_gamma(y, shape = prediction['shape'], rate = prediction['rate']),
-         logistic = scoringRules::crps_logis(y, location = prediction['location'], scale = prediction['scale']),
-         exponential = scoringRules::crps_exp(y, rate = prediction['rate']),
-         poisson = scoringRules::crps_pois(y, lambda = prediction['lambda']),
-         sample = scoringRules::crps_sample(y, prediction)
-  ),
-  error = function(e) NA_real_, finally = NA_real_)
+    switch(unique(as.character(family)),
+           lognormal = scoringRules::crps_lnorm(y, prediction['mu'], prediction['sigma']),
+           normal = scoringRules::crps_norm(y, prediction['mu'], prediction['sigma']),
+           bernoulli = scoringRules::crps_binom(y, size = 1, prediction['prob']),
+           beta = scoringRules::crps_beta(y, shape1 = prediction['shape1'], shape1 = prediction['shape2']),
+           uniform = scoringRules::crps_unif(y, min = prediction['min'], max = prediction['max']),
+           gamma = scoringRules::crps_gamma(y, shape = prediction['shape'], rate = prediction['rate']),
+           logistic = scoringRules::crps_logis(y, location = prediction['location'], scale = prediction['scale']),
+           exponential = scoringRules::crps_exp(y, rate = prediction['rate']),
+           poisson = scoringRules::crps_pois(y, lambda = prediction['lambda']),
+           sample = scoringRules::crps_sample(y, prediction)
+    ),
+    error = function(e) NA_real_, finally = NA_real_)
 }
 
 
