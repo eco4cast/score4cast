@@ -81,7 +81,7 @@ summarize_forecast <- function(forecast, extra_groups = NULL) {
       quantile10 = as.numeric(distributional::hilo(dist, 90)$lower)
           ) |> 
     dplyr::select(-dist) |>
-    ungroup()
+    dplyr::ungroup()
 }
 
 
