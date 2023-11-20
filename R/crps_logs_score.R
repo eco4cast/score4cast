@@ -65,13 +65,12 @@ summarize_forecast <- function(forecast, extra_groups = NULL) {
   
   # use with across(any_of()) to avoid bare names; allows optional terms
   grouping <- c("model_id", "reference_datetime", "site_id", 
-                "datetime", "family", "variable", "pubDate", extra_groups)
+                "datetime", "family", "variable", "pubDate","pub_datetime", extra_groups)
   
   forecast |> 
-    dplyr::mutate(family = ifelse(family == "ensemble", "sample", family)) |> 
-    dplyr::group_by(dplyr::across(dplyr::any_of(grouping))) |> 
-    dplyr::summarise(dist = infer_dist(family, parameter, prediction),
-                     .groups = "drop") |>
+    dplyr::mutate(family = ifelse(family == "ensemble", "sample", family)) |>
+    dplyr::group_by(dplyr::across(dplyr::any_of(grouping))) |>
+    dplyr::summarise(dist = score4cast:::infer_dist(family, parameter, prediction)) |>
     dplyr::mutate(
       mean = as.numeric(mean(dist)),
       median = as.numeric(stats::median(dist)),
@@ -80,8 +79,9 @@ summarize_forecast <- function(forecast, extra_groups = NULL) {
       quantile02.5 = as.numeric(distributional::hilo(dist, 95)$lower),
       quantile90 = as.numeric(distributional::hilo(dist, 90)$upper),
       quantile10 = as.numeric(distributional::hilo(dist, 90)$lower)
-    ) |> dplyr::select(-dist)
-  
+          ) |> 
+    dplyr::select(-dist) |>
+    ungroup()
 }
 
 
